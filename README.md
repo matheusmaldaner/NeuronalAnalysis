@@ -79,7 +79,7 @@ Distributed under the MIT License. See `LICENSE` for more information.
 <!-- Authors -->
 ## Authors
 
-Ethan Fan - [Github](https://github.com/ethan12103)
+Ethan Fan - [Github](https://github.com/Ethan12103)
 
 Matheus Kunzler Maldaner - [Github](https://github.com/matheusmaldaner)
 
