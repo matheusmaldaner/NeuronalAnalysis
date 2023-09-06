@@ -79,13 +79,13 @@ Distributed under the MIT License. See `LICENSE` for more information.
 <!-- Authors -->
 ## Authors
 
-Ethan Fan - [Github](github.com/ethan12103)
+Ethan Fan - [Github](https://github.com/ethan12103)
 
 Matheus Kunzler Maldaner - [Github](https://github.com/matheusmaldaner)
 
-Nathan Gilman - [Github](github.com/npgilman)
+Nathan Gilman - [Github](https://github.com/npgilman)
 
-Rama Janco - [Github](github.com/ramawama)
+Rama Janco - [Github](https://github.com/ramawama)
 
 <!-- ACKNOWLEDGEMENTS -->
 ## Acknowledgements
