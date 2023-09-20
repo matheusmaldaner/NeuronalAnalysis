@@ -102,7 +102,7 @@ final_mapped_df <- data.frame(
 
 
 # writes results to file
-readr::write_tsv(final_mapped_df, file.path(results_dir, "mapped_df"))
+readr::write_tsv(final_mapped_df, file.path(results_dir, "mapped_df.tsv"))
 
 # prints session info
 sessioninfo::session_info()
