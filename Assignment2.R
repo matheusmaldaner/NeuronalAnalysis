@@ -20,6 +20,7 @@ data_dir <- file.path("data", "SRP094496")
 data_file <- file.path(data_dir, "SRP094496.tsv")
 metadata_file <- file.path(data_dir, "metadata_SRP094496.tsv")
 results_dir <- "results"
+mapped_file <- file.path(results_dir, "mapped_df.tsv")
 plots_dir <- "plots"
 
 
@@ -193,7 +194,18 @@ library(magrittr)
 set.seed(50341)
 
 metadata <- readr::read_tsv(metadata_file)
+expression_df <- readr::read_tsv(data_file) %>%
+  tibble::column_to_rownames("Gene")
 
+# Make the data in the order of the metadata
+expression_df <- expression_df %>%
+  dplyr::select(metadata$refinebio_accession_code)
+
+# Check if this is in the same order
+all.equal(colnames(expression_df), metadata$refinebio_accession_code)
+
+#since for out two groups were using titles pm (85) and all others (~1520)
+head(metadata$refinebio_title)
 
 # Create a volcano plot
 # ...
