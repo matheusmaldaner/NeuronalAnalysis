@@ -193,9 +193,10 @@ library(magrittr)
 #set random seed
 set.seed(50341)
 
+
 metadata <- readr::read_tsv(metadata_file)
-expression_df <- readr::read_tsv(data_file) %>%
-  tibble::column_to_rownames("Gene")
+expression_df <- readr::read_tsv(mapped_file) %>%
+  tibble::column_to_rownames("Ensembl")
 
 # Make the data in the order of the metadata
 expression_df <- expression_df %>%
@@ -204,14 +205,52 @@ expression_df <- expression_df %>%
 # Check if this is in the same order
 all.equal(colnames(expression_df), metadata$refinebio_accession_code)
 
-#since for out two groups were using titles pm (85) and all others (~1520)
+#since for out two groups were using titles pm (85 unique, 211 instances) and all others (~1420)
 head(metadata$refinebio_title)
 
+# Set up metadata
+metadata <- metadata %>%
+  dplyr::mutate(title_status = dplyr::case_when(
+    stringr::str_detect(refinebio_title, "PM-\\d+") ~ "PM-#",
+    TRUE ~ "other"
+  ))
+
+dplyr::select(metadata, refinebio_title, title_status)
+str(metadata$title_status)
+
+metadata <- metadata %>%
+  dplyr::mutate(
+    # Here we define the values our factor variable can have and their order.
+    title_status = factor(title_status, levels = c("other", "PM-\\d+"))
+  )
+
+levels(metadata$title_status)
+
+# Define a minimum counts cutoff and filter the data to include
+# only rows (genes) that have total counts above the cutoff
+filtered_expression_df <- expression_df %>%
+  dplyr::filter(rowSums(.) >= 10)
+
+
+# Create a DESeq2Dataset
+# round all expression counts
+gene_matrix <- round(filtered_expression_df)
+
+ddset <- DESeqDataSetFromMatrix(
+  # Here we supply non-normalized count data
+  countData = gene_matrix,
+  # Supply the `colData` with our metadata data frame
+  colData = metadata,
+  # Supply our experimental variable to `design`
+  design = ~title_staus
+)
+
 # Create a volcano plot
-# ...
+
 
 # Create a table of differentially expressed genes
 # ...
+
 
 
 
