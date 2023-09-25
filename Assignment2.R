@@ -171,7 +171,29 @@ ggplot(data.frame(PerGeneMedianRange = per_gene_median_range), aes(x = PerGeneMe
 
 # R Code for Differential Analysis
 # Perform differential analysis
-# ...
+
+# Install these packages if they aren't installed yet
+
+if (!("DESeq2" %in% installed.packages())) {
+  BiocManager::install("DESeq2", update = FALSE)
+}
+if (!("EnhancedVolcano" %in% installed.packages())) {
+  BiocManager::install("EnhancedVolcano", update = FALSE)
+}
+if (!("apeglm" %in% installed.packages())) {
+  BiocManager::install("apeglm", update = FALSE)
+}
+
+#attaching libraries
+library(DESeq2)
+library(ggplot2)
+library(magrittr)
+
+#set random seed
+set.seed(50341)
+
+metadata <- readr::read_tsv(metadata_file)
+
 
 # Create a volcano plot
 # ...
