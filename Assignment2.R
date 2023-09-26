@@ -292,7 +292,19 @@ readr::write_tsv(
 )
 
 # Create a volcano plot
-
+volcano_plot <- EnhancedVolcano::EnhancedVolcano(
+  deseq_df,
+  lab = deseq_df$Ensembl,
+  x = "log2FoldChange",
+  y = "padj",
+  pCutoff = 0.01 # Loosen the cutoff since we supplied corrected p-values
+)
+volcano_plot
+ggsave(
+  plot = volcano_plot,
+  file.path(plots_dir, "SRP123625_volcano_plot.png")
+) # Replace with a plot name relevant to your data
+ 
 
 # Create a table of differentially expressed genes
 # ...
