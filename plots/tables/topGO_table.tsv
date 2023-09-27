@@ -1,0 +1,16 @@
+GO.ID	Term	Annotated	Significant	Expected	classicFisher
+GO:0009987	cellular process	16837	4099	3662.01	< 1e-30
+GO:0071840	cellular component organization or bioge...	6440	1789	1400.68	< 1e-30
+GO:0016043	cellular component organization	6241	1740	1357.4	< 1e-30
+GO:0048731	system development	4073	1196	885.87	< 1e-30
+GO:0050794	regulation of cellular process	11410	2871	2481.65	< 1e-30
+GO:0065007	biological regulation	12602	3118	2740.9	< 1e-30
+GO:0044237	cellular metabolic process	9153	2364	1990.76	< 1e-30
+GO:0007275	multicellular organism development	5117	1434	1112.93	< 1e-30
+GO:0050789	regulation of biological process	12166	3020	2646.08	< 1e-30
+GO:0007399	nervous system development	2520	783	548.09	< 1e-30
+GO:0048518	positive regulation of biological proces...	6560	1751	1426.78	2.1e-29
+GO:0006807	nitrogen compound metabolic process	9181	2342	1996.85	8.0e-29
+GO:0032502	developmental process	6688	1776	1454.62	1.2e-28
+GO:0048522	positive regulation of cellular process	5871	1586	1276.93	1.4e-28
+GO:0051179	localization	5280	1445	1148.39	3.3e-28

@@ -364,7 +364,7 @@ deseq_df <- file.path(results_dir, "SRP094496_diff_expr_results.tsv")
 deseq_data <- readr::read_tsv(deseq_df)
 
 #named vector of p-values
-all_genes <- setNames(deseq_data$pvalue, deseq_data$Ensembl)
+all_genes <- setNames(deseq_data$pvalue, deseq_data$symbol)
 #statistically sig genes
 geneSelectionFunc <- function(pvalues) {
   return(pvalues < 0.01)
@@ -381,7 +381,7 @@ library(org.Mm.eg.db)
 keytypes(org.Mm.eg.db)
 head(names(all_genes))
 
-valid_keys <- keys(org.Mm.eg.db, keytype = "ENSEMBL")
+valid_keys <- keys(org.Mm.eg.db, keytype = "SYMBOL")
 head(intersect(valid_keys, names(all_genes)))
 length(valid_keys)
 
@@ -392,8 +392,7 @@ length(invalid_keys)
 all_genes_valid <- all_genes[names(all_genes) %in% valid_keys]
 
 
-sample_gene <- sample(names(all_genes), 1)
-select(org.Mm.eg.db, keys = sample_gene, columns = "GO", keytype = "ENSEMBL")
+
 
 
 # Create topGOdata Object:
@@ -405,21 +404,47 @@ GOdata <- new("topGOdata",
               nodeSize = 10, 
               annot = annFUN.org,
               mapping = "org.Mm.eg.db",
-              ID = "ENSEMBL")
+              ID = "SYMBOL")
 
 GOdata
 
 resultFisher <- runTest(GOdata, algorithm = "classic", statistic = "fisher")
+## other enrichment tests
+resultKS <- runTest(GOdata, algorithm = "classic", statistic = "ks")
+resultKS.elim <- runTest(GOdata, algorithm = "elim", statistic = "ks")
 
+tableKS <- GenTable(GOdata, 
+                    classicKS = resultKS, 
+                    topNodes = 10, 
+                    orderBy = "classicKS", 
+                    ranksOf = "classicKS")
+print(tableKS)
+
+tableKSelim <- GenTable(GOdata, 
+                        elimKS = resultKS.elim, 
+                        topNodes = 10, 
+                        orderBy = "elimKS", 
+                        ranksOf = "elimKS")
+print(tableKSelim)
+## other^
 tableFisher <- GenTable(GOdata, 
                         classicFisher = resultFisher, 
-                        topNodes = 10, 
+                        topNodes = 15, 
                         orderBy = "classicFisher", 
                         ranksOf = "classicFisher")
 print(tableFisher)
 
+tables_dir <- file.path(plots_dir, "tables")
+readr::write_tsv(
+  tableFisher,
+  file.path(tables_dir, "topGO_table.tsv")
+)
 
-allRes <- GenTable(GOdata, classicFisher = resultFisher,topNodes = 10)
 
+allRes <- GenTable(GOdata, classicFisher = resultFisher,
+                      classicKS = resultKS, elimKS = resultKS.elim,
+                      orderBy = "elimKS", ranksOf = "classicFisher", topNodes = 10)
+
+print(allRes)
 # Write summaries for each plot/table
 # ...
