@@ -135,7 +135,6 @@ log_scaled_data <- log(df + 1)
 
 per_gene_median_range <- apply(log_scaled_data, 1, function(x) max(x) - min(x))
 
-
 library(ggplot2)
 
 ggplot(data.frame(PerGeneMedianRange = per_gene_median_range), aes(x = PerGeneMedianRange)) +
@@ -255,7 +254,6 @@ ddset <- DESeqDataSetFromMatrix(
   design = ~title_status
 )
 
-
 deseq_object <- DESeq(ddset)
 
 deseq_results <- results(deseq_object)
@@ -307,12 +305,37 @@ ggsave(
  
 
 # Create a table of differentially expressed genes
-# ...
+install.packages("devtools")
+library(devtools)
+install_github("jokergoo/ComplexHeatmap", force = TRUE)
+library(ComplexHeatmap)
+
+if (!("org.Mm.eg.db" %in% installed.packages())) {
+  BiocManager::install("org.Mm.eg.db", update = FALSE)
+}
+library(org.Mm.eg.db)
+
+diff_expr_df <- readr::read_tsv("results/SRP094496_diff_expr_results.tsv")
+
+significant_df <- subset(diff_expr_df, (threshold == T))
+diff_expr_df <- subset(diff_expr_df, ((diff_expr_df$baseMean >= 7) & abs(diff_expr_df$log2FoldChange) >= 1) & (threshold == T))
+diff_expr_df
+
+diff_expr_df$symbol <- mapIds(org.Mm.eg.db, 
+                            keys = diff_expr_df$Ensembl,
+                            keytype = "ENSEMBL",
+                            column = "SYMBOL",
+                            multiVals = "first")
 
 
+# video says to use normalized = T in the counts() func
+mat <- counts(ddset)[diff_expr_df$Ensembl,]
+mat.z <- t(apply(mat, 1, scale))
+colnames(mat.z) <- rownames(metadata)
 
-
-
+hm_plot <- Heatmap(mat.z, cluster_rows = T, cluster_columns = T, column_labels = colnames(mat.z),
+                   row_labels = diff_expr_df$symbol, name = "Z-score")
+hm_plot
 
 # R Code for Summary Tables and Plots
 # # Create tables of enriched processes
