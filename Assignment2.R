@@ -201,6 +201,11 @@ expression_df <- readr::read_tsv(mapped_file) %>%
 expression_df <- expression_df %>%
   dplyr::select(metadata$refinebio_accession_code)
 
+expression_df <- expression_df %>%
+  dplyr::select(first_mapped_hugo_id, all_hugo_ids, metadata$refinebio_accession_code)
+rownames(expression_df)
+
+
 # Check if this is in the same order
 all.equal(colnames(expression_df), metadata$refinebio_accession_code)
 
@@ -277,6 +282,12 @@ deseq_df <- deseq_results %>%
   # higher expression in RPL10 mutated samples
   dplyr::arrange(dplyr::desc(log2FoldChange))
 
+deseq_df$symbol <- mapIds(org.Mm.eg.db, 
+                          keys = deseq_df$Ensembl,
+                          keytype = "ENSEMBL",
+                          column = "SYMBOL",
+                          multiVals = "first")
+
 head(deseq_df)
 
 #plotCounts(ddset, gene = "ENSMUSG00000021743", intgroup = "title_status")
@@ -292,7 +303,7 @@ readr::write_tsv(
 # Create a volcano plot
 volcano_plot <- EnhancedVolcano::EnhancedVolcano(
   deseq_df,
-  lab = deseq_df$Ensembl,
+  lab = deseq_df$symbol,
   x = "log2FoldChange",
   y = "padj",
   pCutoff = 0.01 # Loosen the cutoff since we supplied corrected p-values
@@ -337,8 +348,10 @@ hm_plot <- Heatmap(mat.z, cluster_rows = T, cluster_columns = T, column_labels =
                    row_labels = diff_expr_df$symbol, name = "Z-score")
 hm_plot
 
+
 # R Code for Summary Tables and Plots
 # # Create tables of enriched processes
+
 
 # TopGo
 if (!requireNamespace("BiocManager", quietly = TRUE))
@@ -396,9 +409,17 @@ GOdata <- new("topGOdata",
 
 GOdata
 
+resultFisher <- runTest(GOdata, algorithm = "classic", statistic = "fisher")
+
+tableFisher <- GenTable(GOdata, 
+                        classicFisher = resultFisher, 
+                        topNodes = 10, 
+                        orderBy = "classicFisher", 
+                        ranksOf = "classicFisher")
+print(tableFisher)
 
 
-GOdata
+allRes <- GenTable(GOdata, classicFisher = resultFisher,topNodes = 10)
 
 # Write summaries for each plot/table
 # ...
