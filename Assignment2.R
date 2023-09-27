@@ -339,7 +339,66 @@ hm_plot
 
 # R Code for Summary Tables and Plots
 # # Create tables of enriched processes
-# ...
+
+# TopGo
+if (!requireNamespace("BiocManager", quietly = TRUE))
+  install.packages("BiocManager")
+BiocManager::install("topGO")
+library(topGO)
+library(org.Mm.eg.db)
+
+deseq_df <- file.path(results_dir, "SRP094496_diff_expr_results.tsv")
+deseq_data <- readr::read_tsv(deseq_df)
+
+#named vector of p-values
+all_genes <- setNames(deseq_data$pvalue, deseq_data$Ensembl)
+#statistically sig genes
+geneSelectionFunc <- function(pvalues) {
+  return(pvalues < 0.01)
+}
+
+
+
+selected_genes <- sum(geneSelectionFunc(all_genes))
+print(selected_genes)
+
+library(org.Mm.eg.db)
+
+# Pick a random gene from your list
+keytypes(org.Mm.eg.db)
+head(names(all_genes))
+
+valid_keys <- keys(org.Mm.eg.db, keytype = "ENSEMBL")
+head(intersect(valid_keys, names(all_genes)))
+length(valid_keys)
+
+invalid_keys <- setdiff(names(all_genes), valid_keys)
+head(invalid_keys)
+length(invalid_keys)
+
+all_genes_valid <- all_genes[names(all_genes) %in% valid_keys]
+
+
+sample_gene <- sample(names(all_genes), 1)
+select(org.Mm.eg.db, keys = sample_gene, columns = "GO", keytype = "ENSEMBL")
+
+
+# Create topGOdata Object:
+GOdata <- new("topGOdata",
+              description = "My GO Analysis",
+              ontology = "BP", 
+              allGenes = all_genes, 
+              geneSel = geneSelectionFunc, 
+              nodeSize = 10, 
+              annot = annFUN.org,
+              mapping = "org.Mm.eg.db",
+              ID = "ENSEMBL")
+
+GOdata
+
+
+
+GOdata
 
 # Write summaries for each plot/table
 # ...
