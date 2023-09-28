@@ -332,7 +332,7 @@ hm_plot
 # step 5: Everyone
 # ====================================================
 
-# topGo
+# topGo, BP
 if (!requireNamespace("BiocManager", quietly = TRUE))
   install.packages("BiocManager")
 BiocManager::install("topGO")
@@ -438,8 +438,63 @@ print(allRes)
 
 
 # ----------------------------------------------------
-# GenomicSuperSignature
+# topGO, ontology = MF
+# Create topGOdata Object:
+mfGOdata <- new("topGOdata",
+              description = "My MF GO Analysis",
+              ontology = "MF", 
+              allGenes = all_genes, 
+              geneSel = geneSelectionFunc, 
+              nodeSize = 10, 
+              annot = annFUN.org,
+              mapping = "org.Mm.eg.db",
+              ID = "SYMBOL")
 
+mfGOdata
+
+resultFisher <- runTest(mfGOdata, algorithm = "classic", statistic = "fisher")
+## other enrichment tests
+resultKS <- runTest(mfGOdata, algorithm = "classic", statistic = "ks")
+resultKS.elim <- runTest(mfGOdata, algorithm = "elim", statistic = "ks")
+
+tableKS <- GenTable(mfGOdata, 
+                    classicKS = resultKS, 
+                    topNodes = 10, 
+                    orderBy = "classicKS", 
+                    ranksOf = "classicKS")
+print(tableKS)
+
+tableKSelim <- GenTable(mfGOdata, 
+                        elimKS = resultKS.elim, 
+                        topNodes = 10, 
+                        orderBy = "elimKS", 
+                        ranksOf = "elimKS")
+print(tableKSelim)
+## other^
+tableFisher <- GenTable(mfGOdata, 
+                        classicFisher = resultFisher, 
+                        topNodes = 15, 
+                        orderBy = "classicFisher", 
+                        ranksOf = "classicFisher")
+print(tableFisher)
+
+
+readr::write_tsv(
+  tableFisher,
+  file.path(plots_dir, "MFtopGO_table.tsv")
+)
+
+
+allRes <- GenTable(GOdata, classicFisher = resultFisher,
+                   classicKS = resultKS, elimKS = resultKS.elim,
+                   orderBy = "elimKS", ranksOf = "classicFisher", topNodes = 10)
+
+readr::write_tsv(
+  allRes,
+  file.path(tables_dir, "MFallRes.tsv")
+)
+
+print(allRes)
 
 
 

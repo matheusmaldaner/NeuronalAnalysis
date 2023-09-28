@@ -1,0 +1,11 @@
+GO.ID	Term	Annotated	Significant	Expected	Rank in classicFisher	classicFisher	classicKS	elimKS
+GO:0003674	molecular_function	22124	4944	4934.85	1322	0.99	0.00065	< 1e-30
+GO:0005515	protein binding	9361	2549	2088.01	1	< 1e-30	< 1e-30	< 1e-30
+GO:0042802	identical protein binding	2373	664	529.31	11	7.4e-12	< 1e-30	< 1e-30
+GO:0046872	metal ion binding	3607	1000	804.56	6	9.3e-17	< 1e-30	< 1e-30
+GO:0005524	ATP binding	1402	388	312.72	33	9.0e-07	1.4e-13	1.7e-13
+GO:0044877	protein-containing complex binding	1609	453	358.89	24	1.0e-08	1.7e-13	7.5e-11
+GO:0019904	protein domain specific binding	833	258	185.8	21	3.1e-09	1.6e-13	4.9e-10
+GO:0140096	catalytic activity, acting on a protein	2256	582	503.21	49	2.8e-05	1.2e-13	1.3e-06
+GO:0005096	GTPase activator activity	241	82	53.76	48	2.1e-05	1.5e-06	1.5e-06
+GO:0019901	protein kinase binding	780	244	173.98	22	3.1e-09	7.7e-10	1.7e-06
