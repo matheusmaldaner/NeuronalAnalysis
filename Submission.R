@@ -402,9 +402,36 @@ print(allRes)
 
 # ----------------------------------------------------
 # gProfiler2
+if (!requireNamespace("gprofiler2", quietly = TRUE)) {
+  install.packages("gprofiler2")
+}
 
+library(gprofiler2)
 
+selected_gene_symbols <- names(all_genes)[geneSelectionFunc(all_genes)]
 
+# Enrichment analysis
+gprofiler2_enrichment_results <- gprofiler2::gost(
+  query = selected_gene_symbols,
+  organism = "mmusculus", # For Mus musculus
+  sources = c("GO:BP"),   # For Biological Process
+  correction_method = "fdr" # Using false discovery rate for multiple test correction'
+)
+gprofiler2_enrichment_results$result$p_adjusted <- p.adjust(gprofiler2_enrichment_results$result$p_value, method = "BH")
+# Filtering for significant terms
+significant_terms <- gprofiler2_enrichment_results$result[gprofiler2_enrichment_results$result$`p_adjusted` < 0.01, ]
+
+# Selecting the columns of interest
+table_cols <- c("term_name", "term_size", "intersection_size", "p_value", "p_adjusted", "effective_domain_size")
+# Sorting by the p.adjusted column
+sorted_table <- significant_terms[order(significant_terms$p_adjusted), ]
+
+# Selecting the top 20 rows
+top_20 <- sorted_table[1:20, ]
+
+significant_table <- top_20[, table_cols, drop = FALSE]
+
+readr::write_tsv(significant_table, file.path(tables_dir, "gProfiler2_table.tsv"))
 
 # ----------------------------------------------------
 # GenomicSuperSignature
