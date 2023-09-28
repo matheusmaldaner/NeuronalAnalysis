@@ -417,6 +417,11 @@ allRes <- GenTable(GOdata, classicFisher = resultFisher,
                    classicKS = resultKS, elimKS = resultKS.elim,
                    orderBy = "elimKS", ranksOf = "classicFisher", topNodes = 10)
 
+readr::write_tsv(
+  allRes,
+  file.path(tables_dir, "allRes.tsv")
+)
+
 print(allRes)
 
 
