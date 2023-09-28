@@ -300,6 +300,32 @@ ggsave(
 # step 4: Nathan
 # ====================================================
 
+install.packages("devtools")
+library(devtools)
+install_github("jokergoo/ComplexHeatmap", force = TRUE)
+library(ComplexHeatmap)
+
+if (!("org.Mm.eg.db" %in% installed.packages())) {
+  BiocManager::install("org.Mm.eg.db", update = FALSE)
+}
+library(org.Mm.eg.db)
+
+diff_expr_df <- readr::read_tsv("results/SRP094496_diff_expr_results.tsv")
+
+significant_df <- subset(diff_expr_df, (threshold == T))
+significant_df <- subset(significant_df, ((significant_df$baseMean >= 7) & abs(significant_df$log2FoldChange) >= 1))
+significant_df
+
+ddset[significant_df$symbol,]
+mat <- counts(ddset)[significant_df$symbol,]
+
+mat.z <- t(apply(mat, 1, scale))
+colnames(mat.z) <- rownames(metadata)
+diff_expr_df$symbol
+dim(diff_expr_df$symbol)
+hm_plot <- Heatmap(mat.z, cluster_rows = T, cluster_columns = T, column_labels = colnames(mat.z),
+                   row_labels = diff_expr_df$symbol, name = "Z-score")
+hm_plot
 
 
 # ====================================================
