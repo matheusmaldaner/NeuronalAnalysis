@@ -43,7 +43,7 @@ df_non_na <- na.omit(df_numerical)
 
 # keeps only unique hugo ids, averaging duplicate ones (below function is deprecated)
 df_averaged <- df_non_na %>%
-group_by(first_mapped_hugo_id) %>%
+  group_by(first_mapped_hugo_id) %>%
   summarise(across(where(is.numeric), ~mean(.x, na.rm = TRUE)), .groups = 'drop')
 
 
@@ -427,42 +427,78 @@ print(allRes)
 
 # ----------------------------------------------------
 # clustProfiler
+if (!requireNamespace("BiocManager", quietly = TRUE)) install.packages("BiocManager")
+BiocManager::install("clusterProfiler", force = TRUE)
+
+library(clusterProfiler)
+
+deseq_df <- file.path(results_dir, "SRP094496_diff_expr_results.tsv")
+deseq_data <- readr::read_tsv(deseq_df)
+
+
+# Convert gene symbols to Entrez Gene IDs for the clusterProfiler
+entrez_ids <- mapIds(org.Mm.eg.db, keys = deseq_data$Hugo, column = "ENTREZID", keytype = "SYMBOL")
+# Replace the "Hugo" column with the converted Entrez Gene IDs
+deseq_data$Hugo <- entrez_ids
+# Rename the "Hugo" column to "ENTREZID"
+colnames(deseq_data)[colnames(deseq_data) == "Hugo"] <- "ENTREZID"
+
+
+all_genes <- setNames(deseq_data$pvalue, deseq_data$ENTREZID)
+sorted_all_genes <- all_genes[order(all_genes, decreasing = TRUE)]
+
+
+ego3 <- gseGO(geneList     = sorted_all_genes,
+              OrgDb        = org.Mm.eg.db,
+              ont          = "BP",
+              minGSSize    = 100,
+              maxGSSize    = 150,
+              pvalueCutoff = 0.01,
+              verbose      = FALSE)
+
+
+
+goplot(ego3, max.overlaps = 50)  # Increase max.overlaps to 100 (or your desired value)
+
+
+
+ggsave(
+  plot = last_plot(), width = 20, height = 20, bg = "white",
+  file.path(plots_dir, "clust_profiler.png")
+) # Replace with a plot name relevant to your data
+
+
+str(ego3)
+
+# Extract information from the ego3 object
+enriched_terms <- ego3$Description
+p_values <- ego3$`pvalue`
+q_values <- ego3$`qvalue`
+enrichment_score <- ego3$enrichmentScore
+
+# Create a data frame to store the information
+enrichment_table <- data.frame(
+  Term = enriched_terms,
+  P_Value = p_values,
+  Q_Value = q_values,
+  Enrichment_Score = enrichment_score
+)
+
+
+
+# Filter for statistically significant terms (adjust the threshold as needed)
+significantly_enriched_terms <- enrichment_table[enrichment_table$p_Value < 0.01, ]
+
+# Print the table of significantly enriched terms
+print(significantly_enriched_terms)
+
 
 
 
 
 # ----------------------------------------------------
 # gProfiler2
-if (!requireNamespace("gprofiler2", quietly = TRUE)) {
-  install.packages("gprofiler2")
-}
 
-library(gprofiler2)
-
-selected_gene_symbols <- names(all_genes)[geneSelectionFunc(all_genes)]
-
-# Enrichment analysis
-gprofiler2_enrichment_results <- gprofiler2::gost(
-  query = selected_gene_symbols,
-  organism = "mmusculus", # For Mus musculus
-  sources = c("GO:BP"),   # For Biological Process
-  correction_method = "fdr" # Using false discovery rate for multiple test correction'
-)
-gprofiler2_enrichment_results$result$p_adjusted <- p.adjust(gprofiler2_enrichment_results$result$p_value, method = "BH")
-# Filtering for significant terms
-significant_terms <- gprofiler2_enrichment_results$result[gprofiler2_enrichment_results$result$`p_adjusted` < 0.01, ]
-
-# Selecting the columns of interest
-table_cols <- c("term_name", "term_size", "intersection_size", "p_value", "p_adjusted", "effective_domain_size")
-# Sorting by the p.adjusted column
-sorted_table <- significant_terms[order(significant_terms$p_adjusted), ]
-
-# Selecting the top 20 rows
-top_20 <- sorted_table[1:20, ]
-
-significant_table <- top_20[, table_cols, drop = FALSE]
-
-readr::write_tsv(significant_table, file.path(tables_dir, "gProfiler2_table.tsv"))
 
 
 
@@ -470,14 +506,14 @@ readr::write_tsv(significant_table, file.path(tables_dir, "gProfiler2_table.tsv"
 # topGO, ontology = MF
 # Create topGOdata Object:
 mfGOdata <- new("topGOdata",
-              description = "My MF GO Analysis",
-              ontology = "MF", 
-              allGenes = all_genes, 
-              geneSel = geneSelectionFunc, 
-              nodeSize = 10, 
-              annot = annFUN.org,
-              mapping = "org.Mm.eg.db",
-              ID = "SYMBOL")
+                description = "My MF GO Analysis",
+                ontology = "MF", 
+                allGenes = all_genes, 
+                geneSel = geneSelectionFunc, 
+                nodeSize = 10, 
+                annot = annFUN.org,
+                mapping = "org.Mm.eg.db",
+                ID = "SYMBOL")
 
 mfGOdata
 
@@ -524,3 +560,9 @@ readr::write_tsv(
 )
 
 print(allRes)
+
+
+
+
+
+
