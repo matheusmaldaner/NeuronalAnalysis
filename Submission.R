@@ -312,17 +312,17 @@ library(org.Mm.eg.db)
 
 diff_expr_df <- readr::read_tsv("results/SRP094496_diff_expr_results.tsv")
 
+# filter differential expression data to make a manageable subset for the heatmap
 significant_df <- subset(diff_expr_df, (threshold == T))
 significant_df <- subset(significant_df, ((significant_df$baseMean >= 7) & abs(significant_df$log2FoldChange) >= 1))
 significant_df
 
-ddset[significant_df$symbol,]
+# calculate z-scores for the genes provided
 mat <- counts(ddset)[significant_df$symbol,]
-
 mat.z <- t(apply(mat, 1, scale))
 colnames(mat.z) <- rownames(metadata)
-diff_expr_df$symbol
-dim(diff_expr_df$symbol)
+
+# create heatmap given z-score data
 hm_plot <- Heatmap(mat.z, cluster_rows = T, cluster_columns = T, column_labels = colnames(mat.z),
                    row_labels = diff_expr_df$symbol, name = "Z-score")
 hm_plot
