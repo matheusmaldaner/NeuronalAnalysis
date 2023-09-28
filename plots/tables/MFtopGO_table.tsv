@@ -1,0 +1,16 @@
+GO.ID	Term	Annotated	Significant	Expected	classicFisher
+GO:0005515	protein binding	9361	2549	2088.01	< 1e-30
+GO:0005488	binding	13762	3509	3069.67	< 1e-30
+GO:0043167	ion binding	5346	1490	1192.45	9.4e-28
+GO:0043169	cation binding	3704	1028	826.19	2.0e-17
+GO:0003824	catalytic activity	5495	1458	1225.68	2.4e-17
+GO:0046872	metal ion binding	3607	1000	804.56	9.3e-17
+GO:0043168	anion binding	2361	671	526.63	2.1e-13
+GO:1901363	heterocyclic compound binding	5311	1382	1184.64	3.0e-13
+GO:0097159	organic cyclic compound binding	5392	1400	1202.71	4.0e-13
+GO:0019899	enzyme binding	2333	655	520.39	5.4e-12
+GO:0042802	identical protein binding	2373	664	529.31	7.4e-12
+GO:0019900	kinase binding	873	279	194.73	1.8e-11
+GO:0017076	purine nucleotide binding	1918	548	427.82	1.9e-11
+GO:0097367	carbohydrate derivative binding	2179	612	486.03	2.9e-11
+GO:0000166	nucleotide binding	2073	581	462.39	1.4e-10

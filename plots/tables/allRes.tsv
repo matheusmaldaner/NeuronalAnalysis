@@ -1,0 +1,11 @@
+GO.ID	Term	Annotated	Significant	Expected	Rank in classicFisher	classicFisher	classicKS	elimKS
+GO:0008150	biological_process	22460	4893	4885	6883	0.98622	0.00033	< 1e-30
+GO:0008285	negative regulation of cell population p...	742	236	161.38	167	9.0e-11	5.2e-15	1.3e-11
+GO:0042776	proton motive force-driven mitochondrial...	65	27	14.14	662	0.00027	2.4e-10	2.4e-10
+GO:0031398	positive regulation of protein ubiquitin...	120	47	26.1	459	1.2e-05	2.8e-09	2.8e-09
+GO:0045944	positive regulation of transcription by ...	1257	342	273.39	368	1.9e-06	1.4e-09	7.6e-09
+GO:0043065	positive regulation of apoptotic process	619	188	134.63	301	3.0e-07	3.5e-14	9.6e-09
+GO:0000226	microtubule cytoskeleton organization	650	182	141.37	564	9.7e-05	9.1e-09	7.6e-08
+GO:1990830	cellular response to leukemia inhibitory...	292	44	63.51	6933	0.99862	1.7e-07	1.7e-07
+GO:0065003	protein-containing complex assembly	1474	430	320.59	136	4.4e-12	< 1e-30	3.7e-07
+GO:0000122	negative regulation of transcription by ...	1003	264	218.15	676	0.00030	6.5e-07	6.7e-07
