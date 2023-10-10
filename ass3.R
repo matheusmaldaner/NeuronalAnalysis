@@ -1,3 +1,6 @@
+# CHANGE PATH VARIABLE
+#setwd("C:/Users/Matheus/OneDrive/University of Florida/JUNIOR FALL/CGS4144/project")
+
 library(readr)
 library(dplyr)
 library(matrixStats)
@@ -30,11 +33,110 @@ sorted_gene_vars_no_na
 most_var_5000 <- sorted_gene_vars_no_na[1:5000, ]
 most_var_5000
 
-## Clustering -----------------------------
+# ----------------------------------------------------------------------------
 
-# testing clustering w K-Means
+# Clustering
+
+# K MEANS
+
 k <- 3
 kmeans_result <- kmeans(differential_expression_df[most_var_5000[,1], ], centers = k)
 kmeans_result
 
-table(kmeans_result$cluster)
+
+# cluster assignments for each sample
+kmeans_cluster_assignments <- kmeans_result$cluster
+
+
+table(kmeans_cluster_assignments)
+
+
+# ----------------------------------------------------------------------------
+
+# HIERARCHICAL CLUSTERING
+
+
+
+
+
+
+
+
+# ----------------------------------------------------------------------------
+
+# CONSESUS CLUSTER PLUS
+
+
+
+
+
+
+
+
+# ----------------------------------------------------------------------------
+
+# GAUSSIAN MIXTURE MODELS
+
+# installs and loads mclust package
+install.packages("mclust")
+library(mclust)
+
+
+# performs GMM clustering
+data_to_cluster <- differential_expression_df[most_var_5000[,1], ]
+gmm_result <- Mclust(data_to_cluster)
+
+
+# prints the clustering results
+summary(gmm_result)
+
+
+# number of clusters identified
+num_clusters <- gmm_result$G
+cat("Number of clusters identified by GMM:", num_clusters, "\n")
+
+
+# cluster assignments for each sample
+gmm_cluster_assignments <- gmm_result$classification
+table(gmm_cluster_assignments)
+
+# ----------------------------------------------------------------------------
+
+# RANDOM STUFF - JUST PLOTTING A PCA TO VISUALIZE CLUSTERS
+
+install.packages(c("ggplot2", "FactoMineR"))
+library(ggplot2)
+library(FactoMineR)
+
+# performs PCA
+data_matrix <- as.matrix(differential_expression_df[most_var_5000[,1], ])
+pca_result <- PCA(data_matrix, graph = FALSE)
+
+
+# extracts first two principal components
+pca_data <- data.frame(
+  PC1 = pca_result$ind$coord[, 1],
+  PC2 = pca_result$ind$coord[, 2],
+  Cluster = factor(kmeans_cluster_assignments) # WE CAN CHANGE THIS TO DIFF TYPES
+)
+
+# plot using ggplot2
+ggplot(pca_data, aes(x = PC1, y = PC2, color = Cluster)) +
+  geom_point(alpha = 0.6, size = 2) +
+  theme_minimal() +
+  labs(title = "PCA Plot of Clusters", x = "PC1", y = "PC2") +
+  scale_color_discrete(name = "Cluster")
+
+
+# ----------------------------------------------------------------------------
+
+# HEATMAP
+
+# Install and load the pheatmap package
+install.packages("pheatmap")
+library(pheatmap)
+
+
+# different types, just label yours...
+
+
