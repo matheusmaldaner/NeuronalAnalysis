@@ -2,37 +2,29 @@ library(readr)
 library(dplyr)
 library(matrixStats)
 
-diff_expr_df <- readr::read_tsv("results/SRP094496_diff_expr_results.tsv")
-head(diff_expr_df)
+# load diff expr results file
+differential_expression_df <- readr::read_tsv("results/SRP094496_diff_expr_results.tsv")
+head(differential_expression_df)
 
-genes <- diff_expr_df$symbol
-diff_expr_df$symbol <- NULL
-diff_expr_df$Ensembl <- NULL
+# store gene IDs in vars and drop them from main df
+# this is so rowVars works (doesn't work with columsn of val <char>)
+symbol <- differential_expression_df$symbol
+Ensembl <- differential_expression_df$Ensembl
+differential_expression_df$symbol <- NULL
+differential_expression_df$Ensembl <- NULL
 
+# calculate variances for each gene
+gene_variability <- rowVars(as.matrix(differential_expression_df))
 
-# Assuming your data frame is named 'differential_expression_df'
-# Calculate the variance for each gene
-gene_variability <- rowVars(as.matrix(diff_expr_df))
-gene_variability
-# Sort genes based on variability in descending order
-varsID <- cbind(seq(1, length(gene_variability), 1), gene_variability)
-genesID <- cbind(seq(1, length(gene_variability), 1), genes)
-varsID
-genesID
+# bind the variances and gene IDs
+unsorted_gene_vars <- cbind(symbol, gene_variability)
+sorted_gene_vars <- unsorted_gene_vars[order(as.numeric(unsorted_gene_vars[, 2]), decreasing=TRUE), ] 
+sorted_gene_vars
 
-?names
+# drop NA vals
+sorted_gene_vars_no_na <- sorted_gene_vars[complete.cases(sorted_gene_vars), ]
+sorted_gene_vars_no_na
 
-result
-genes[1]
-seq(1, length(gene_variability), 1)
-dim(result)
-result[,2]
-
-sorted_genes <- sort(varsID, decreasing = TRUE)
-sorted_genes
-
-# Select the top 5000 most variable genes
-top_5000_variable_genes <- sorted_genes[1:5000]
-
-head(top_5000_variable_genes)
-top
+# grab first 5000
+most_var_5000 <- sorted_gene_vars_no_na[1:5000, ]
+dim(most_var_5000)
