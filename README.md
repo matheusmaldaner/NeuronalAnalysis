@@ -46,11 +46,13 @@ Research Question: "How can the transcriptional profiles of individual neurons, 
 
 ### Dependencies
 
-* Python 3.11
-* Pandas
-* NumPy
-* scikit-learn
-* TensorFlow or PyTorch
+* R 4.3.1
+* RStudio 2023.06.0+421
+
+### Packages
+
+* BiocManager
+* <Others>
 
 ### Installation
 
