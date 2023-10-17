@@ -70,11 +70,19 @@ if (!require("BiocManager", quietly = TRUE))
 
 BiocManager::install("ConsensusClusterPlus")
 
+data_to_cluster <- differential_expression_df[most_var_5000[,1], ]
+data_matrix <- as.matrix(data_to_cluster)
 
 
-
-
-
+library(ConsensusClusterPlus)
+results_5000 <- ConsensusClusterPlus(data_matrix,
+                                maxK=4, 
+                                reps=1000, 
+                                pItem=0.8, 
+                                pFeature=1, 
+                                clusterAlg="hc", 
+                                distance="pearson",
+                                seed=1262118388.71279)
 
 
 # ----------------------------------------------------------------------------
