@@ -171,6 +171,7 @@ results_5000 <- ConsensusClusterPlus(data_matrix,
                                 distance="pearson",
                                 seed=1262118388.71279)
 
+
 #results for top 10
 data_top_10 <- differential_expression_df[most_var_5000[1:10, 1], ]
 matrix_top_10 <- as.matrix(data_top_10)
