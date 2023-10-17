@@ -39,6 +39,7 @@ data_to_cluster <- differential_expression_df[most_var_5000[,1], ]
 # Clustering
 
 # K MEANS
+data_to_cluster <- differential_expression_df[most_var_5000[,1], ]
 
 k <- 3
 kmeans_result <- kmeans(data_to_cluster, centers = k)
@@ -58,6 +59,7 @@ cluster_results <- cbind(1:5000, kmeans_cluster_assignments)
 # HIERARCHICAL CLUSTERING
 
 # Calculate the distance matrix
+data_to_cluster <- differential_expression_df[most_var_5000[,1], ]
 dist_matrix <- dist(data_to_cluster, method = "euclidean")
 
 # Perform hierarchical clustering
