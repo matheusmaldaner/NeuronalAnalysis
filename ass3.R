@@ -38,9 +38,10 @@ most_var_5000
 # Clustering
 
 # K MEANS
+data_to_cluster <- differential_expression_df[most_var_5000[,1], ]
 
 k <- 3
-kmeans_result <- kmeans(differential_expression_df[most_var_5000[,1], ], centers = k)
+kmeans_result <- kmeans(data_to_cluster, centers = k)
 kmeans_result
 
 
@@ -54,6 +55,32 @@ table(kmeans_cluster_assignments)
 # ----------------------------------------------------------------------------
 
 # HIERARCHICAL CLUSTERING
+
+# Calculate the distance matrix
+data_to_cluster <- differential_expression_df[most_var_5000[,1], ]
+dist_matrix <- dist(data_to_cluster, method = "euclidean")
+
+# Perform hierarchical clustering
+hclust_result <- hclust(dist_matrix, method = "complete")
+plot(hclust_result, main = "Hierarchical Clustering Dendrogram", xlab = "Samples")
+hclust_cluster_assignments <- cutree(hclust_result, k=10)
+
+table(hclust_cluster_assignments)
+
+# test with 10 genes
+hc <- hclust(dist(data_to_cluster[1:10, ],method="euclidean"),method="complete")
+plot(hc, main = "Hierarchical Clustering Dendrogram", xlab = "Samples")
+table(cutree(hc,k=10))
+
+# test with 100 genes
+hc <- hclust(dist(data_to_cluster[1:100, ],method="euclidean"),method="complete")
+plot(hc, main = "Hierarchical Clustering Dendrogram", xlab = "Samples")
+table(cutree(hc,k=10))
+
+# test w 1000 genes
+hc <- hclust(dist(data_to_cluster[1:1000, ],method="euclidean"),method="complete")
+plot(hc, main = "Hierarchical Clustering Dendrogram", xlab = "Samples")
+table(cutree(hc,k=10))
 
 
 
