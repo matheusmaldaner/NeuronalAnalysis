@@ -64,7 +64,11 @@ table(kmeans_cluster_assignments)
 
 # ----------------------------------------------------------------------------
 
-# CONSESUS CLUSTER PLUS
+# CONSESUS CLUSTER PLUS, RAMA
+if (!require("BiocManager", quietly = TRUE))
+  install.packages("BiocManager")
+
+BiocManager::install("ConsensusClusterPlus")
 
 
 
