@@ -73,9 +73,13 @@ sil_widths <- sapply(kmeans_results, function(km) {
 })
 
 # Plot average silhouette width for each k
+png("~/BioinformaticsProject/plots/k_means_silhouette.png")
+
 plot(k_values, sil_widths, type = "b", pch = 19, frame = FALSE, 
      xlab = "Number of clusters 'k'", ylab = "Average silhouette width",
      main = "Silhouette Analysis of k-means clustering")
+
+dev.off()
 
 #Test different number of genes
 k <- 3
@@ -101,7 +105,7 @@ alluvial_data <- do.call(rbind, lapply(names(kmeans_genes_results), function(gen
 alluvial_data$genes <- factor(alluvial_data$genes, levels = c("10_genes", "100_genes", "1000_genes", "10000_genes"))
 
 # Plot
-ggplot(data = alluvial_data,
+k_means_alluvial_plot <- ggplot(data = alluvial_data,
        aes(axis1 = genes, axis2 = cluster)) +
   geom_alluvium(aes(fill = cluster), width = 1/12) +  # you might adjust width based on your preference
   geom_stratum(width = 1/12) + 
@@ -111,6 +115,9 @@ ggplot(data = alluvial_data,
        x = "Number of genes used in clustering",
        y = "Sample count",
        fill = "Cluster")  # to add legend title
+
+ggsave(filename = "~/BioinformaticsProject/plots/k_means_alluvial.png", plot = k_means_alluvial_plot, width = 10, height = 8, dpi = 400)
+
 # ----------------------------------------------------------------------------
 
 # HIERARCHICAL CLUSTERING
