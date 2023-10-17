@@ -162,6 +162,47 @@ results_10000 <- ConsensusClusterPlus(matrix_top_10000,
                                      distance="pearson",
                                      seed=1262118388.71279)
 
+
+#alluvial plot
+if (!require("ggalluvial", quietly = TRUE))
+  install.packages("ggalluvial")
+
+if (!require("reshape2", quietly = TRUE))
+  install.packages("reshape2")
+
+
+library(ggalluvial)
+library(reshape2)
+
+cluster_assignments_10 <- results_10[[4]]$consensusClass
+cluster_assignments_100 <- results_100[[4]]$consensusClass
+cluster_assignments_1000 <- results_1000[[4]]$consensusClass
+cluster_assignments_5000 <- results_5000[[4]]$consensusClass
+cluster_assignments_10000 <- results_10000[[4]]$consensusClass
+head(cluster_assignments_10)
+all_clusters <- data.frame(sample_id = names(cluster_assignments_10000), 
+                           most_var_10 = cluster_assignments_10,
+                           most_var_100 = cluster_assignments_100,
+                           most_var_1000 = cluster_assignments_1000,
+                           most_var_5000 = cluster_assignments_5000,
+                           most_var_10000 = cluster_assignments_10000
+)
+colnames(all_clusters)
+head(all_clusters)
+melted_data <- melt(all_clusters, id.vars = "sample_id", variable.name = "variation", value.name = "cluster")
+colnames(melted_data)
+library(ggalluvial)
+ccp_alluvial <- ggplot(data = melted_data,
+       aes(axis1 = sample_id, axis2 = variation, y = cluster)) +
+  geom_alluvium(aes(fill = cluster)) +
+  geom_stratum() +
+  geom_text(stat = "stratum", aes(label = after_stat(stratum))) +
+  theme_minimal()
+
+
+ggsave(filename = "~/BioinformaticsProject/plots/ccp_alluvial.png", plot = ccp_alluvial, width = 10, height = 8, dpi = 400)
+
+
 # ----------------------------------------------------------------------------
 
 # GAUSSIAN MIXTURE MODELS
