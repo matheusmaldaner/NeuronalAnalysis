@@ -36,10 +36,11 @@ most_var_5000
 # ----------------------------------------------------------------------------
 
 # Clustering
+library(cluster)
 
 # K MEANS
 data_to_cluster <- differential_expression_df[most_var_5000[,1], ]
-
+#Set to 3 clusters
 k <- 3
 kmeans_result <- kmeans(data_to_cluster, centers = k)
 kmeans_result
@@ -51,6 +52,27 @@ kmeans_cluster_assignments <- kmeans_result$cluster
 
 table(kmeans_cluster_assignments)
 
+#Set different k values
+k_values <- c(2, 3, 4, 5, 6)
+
+kmeans_results <- list()
+
+# Run K-means for each k and store the results
+for (k in k_values) {
+  set.seed(123) # Set seed for reproducibility
+  kmeans_results[[paste("k", k, sep = "_")]] <- kmeans(data_to_cluster, centers = k)
+}
+
+# Calculate silhouette widths for each k
+sil_widths <- sapply(kmeans_results, function(km) {
+  silhouette_scores <- silhouette(km$cluster, dist(data_to_cluster))
+  mean(silhouette_scores[, 3]) # average silhouette width
+})
+
+# Plot average silhouette width for each k
+plot(k_values, sil_widths, type = "b", pch = 19, frame = FALSE, 
+     xlab = "Number of clusters 'k'", ylab = "Average silhouette width",
+     main = "Silhouette Analysis of k-means clustering")
 
 # ----------------------------------------------------------------------------
 
