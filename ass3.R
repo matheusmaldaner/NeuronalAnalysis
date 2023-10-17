@@ -101,16 +101,66 @@ data_to_cluster <- differential_expression_df[most_var_5000[,1], ]
 data_matrix <- as.matrix(data_to_cluster)
 
 
+#results for top 5000
 library(ConsensusClusterPlus)
 results_5000 <- ConsensusClusterPlus(data_matrix,
                                 maxK=4, 
-                                reps=1000, 
+                                reps=1500, 
                                 pItem=0.8, 
                                 pFeature=1, 
                                 clusterAlg="hc", 
                                 distance="pearson",
                                 seed=1262118388.71279)
 
+#results for top 10
+data_top_10 <- differential_expression_df[most_var_5000[1:10, 1], ]
+matrix_top_10 <- as.matrix(data_top_10)
+results_10 <- ConsensusClusterPlus(matrix_top_10,
+                                     maxK=4, 
+                                     reps=1500, 
+                                     pItem=0.8, 
+                                     pFeature=1, 
+                                     clusterAlg="hc", 
+                                     distance="pearson",
+                                     seed=1262118388.71279)
+
+#results for top 100
+data_top_100 <- differential_expression_df[most_var_5000[1:100, 1], ]
+matrix_top_100 <- as.matrix(data_top_100)
+results_100 <- ConsensusClusterPlus(matrix_top_100,
+                                   maxK=4, 
+                                   reps=1500, 
+                                   pItem=0.8, 
+                                   pFeature=1, 
+                                   clusterAlg="hc", 
+                                   distance="pearson",
+                                   seed=1262118388.71279)
+
+#results for top 1000
+data_top_1000 <- differential_expression_df[most_var_5000[1:1000, 1], ]
+matrix_top_1000 <- as.matrix(data_top_1000)
+results_1000 <- ConsensusClusterPlus(matrix_top_1000,
+                                    maxK=4, 
+                                    reps=1500, 
+                                    pItem=0.8, 
+                                    pFeature=1, 
+                                    clusterAlg="hc", 
+                                    distance="pearson",
+                                    seed=1262118388.71279)
+
+
+#results for top 10000
+most_var_10000 <- sorted_gene_vars_no_na[1:10000, ]
+data_top_10000 <- differential_expression_df[most_var_10000[1:10000, 1], ]
+matrix_top_10000 <- as.matrix(data_top_10000)
+results_10000 <- ConsensusClusterPlus(matrix_top_10000,
+                                     maxK=4, 
+                                     reps=1500, 
+                                     pItem=0.8, 
+                                     pFeature=1, 
+                                     clusterAlg="hc", 
+                                     distance="pearson",
+                                     seed=1262118388.71279)
 
 # ----------------------------------------------------------------------------
 
