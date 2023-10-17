@@ -1,5 +1,5 @@
 # CHANGE PATH VARIABLE
-#setwd("C:/Users/Matheus/OneDrive/University of Florida/JUNIOR FALL/CGS4144/project")
+setwd("C:/Users/twinb/OneDrive/Desktop/school/uf_fall_23/cgs4144/BioinformaticsProject/")
 
 library(readr)
 library(dplyr)
@@ -33,6 +33,7 @@ sorted_gene_vars_no_na
 most_var_5000 <- sorted_gene_vars_no_na[1:5000, ]
 most_var_5000
 
+data_to_cluster <- differential_expression_df[most_var_5000[,1], ]
 # ----------------------------------------------------------------------------
 
 # Clustering
@@ -40,15 +41,16 @@ most_var_5000
 # K MEANS
 
 k <- 3
-kmeans_result <- kmeans(differential_expression_df[most_var_5000[,1], ], centers = k)
+kmeans_result <- kmeans(data_to_cluster, centers = k)
 kmeans_result
 
 
 # cluster assignments for each sample
 kmeans_cluster_assignments <- kmeans_result$cluster
 
-
 table(kmeans_cluster_assignments)
+
+cluster_results <- cbind(1:5000, kmeans_cluster_assignments)
 
 
 # ----------------------------------------------------------------------------
@@ -63,6 +65,7 @@ hclust_result <- hclust(dist_matrix, method = "complete")
 plot(hclust_result, main = "Hierarchical Clustering Dendrogram", xlab = "Samples")
 hclust_cluster_assignments <- cutree(hclust_result, k=10)
 
+cluster_results <- cbind(cluster_results, hclust_cluster_assignments)
 table(hclust_cluster_assignments)
 
 # test with 10 genes
@@ -81,7 +84,7 @@ plot(hc, main = "Hierarchical Clustering Dendrogram", xlab = "Samples")
 table(cutree(hc,k=10))
 
 
-
+## sankey/alluvial plot
 
 
 
@@ -108,7 +111,6 @@ library(mclust)
 
 
 # performs GMM clustering
-data_to_cluster <- differential_expression_df[most_var_5000[,1], ]
 gmm_result <- Mclust(data_to_cluster)
 
 
@@ -134,7 +136,7 @@ library(ggplot2)
 library(FactoMineR)
 
 # performs PCA
-data_matrix <- as.matrix(differential_expression_df[most_var_5000[,1], ])
+data_matrix <- as.matrix()
 pca_result <- PCA(data_matrix, graph = FALSE)
 
 
@@ -157,9 +159,52 @@ ggplot(pca_data, aes(x = PC1, y = PC2, color = Cluster)) +
 
 # HEATMAP
 
-# Install and load the pheatmap package
-install.packages("pheatmap")
+# Install and load necessary packages
+if (!requireNamespace("pheatmap", quietly = TRUE)) {
+  install.packages("pheatmap")
+}
+if (!requireNamespace("dendextend", quietly = TRUE)) {
+  install.packages("dendextend")
+}
+
 library(pheatmap)
+library(dendextend)
+
+# Load your data
+# Replace 'your_data_file.csv' with the actual file path to your gene expression data
+data <- data_to_cluster
+
+data
+
+# Create clustering data
+# Replace 'cluster_data.csv' with the actual file path to your clustering results
+cluster_data <- as.data.frame(cluster_results)
+
+# Create a heatmap
+heatmap_data <- data  # Select the first 5000 genes
+sample_groups <- cluster_data$ # Sample groups from Assignment 1
+
+# Create row and column dendrograms
+row_dend <- as.dendrogram(hclust(dist(heatmap_data)))
+col_dend <- as.dendrogram(hclust(dist(t(heatmap_data))))
+
+# Create annotation data
+annotation_data <- data.frame(
+  Method1 = cluster_data$kmeans_cluster_assignments,
+  Method2 = cluster_data$hclust_cluster_assignments
+)
+
+# Create the heatmap
+pheatmap(
+  heatmap_data,
+  row_dendrogram = row_dend,
+  col_dendrogram = col_dend,
+  annotation_col = annotation_data,
+  show_colnames = FALSE,  # You can set this to TRUE if you want to display column names
+  legend = TRUE,
+  main = "Heatmap of 5,000 Genes",
+  filename = "heatmap.png"  # You can specify the file name and format
+)
 
 
 # different types, just label yours...
