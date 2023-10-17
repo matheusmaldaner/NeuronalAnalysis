@@ -31,24 +31,27 @@ sorted_gene_vars_no_na
 
 # grab first 5000
 most_var_5000 <- sorted_gene_vars_no_na[1:5000, ]
+most_var_10000 <- sorted_gene_vars_no_na[1:10000, ]
 most_var_5000
 
 # ----------------------------------------------------------------------------
 
 # Clustering
+install.packages("ggalluvial")
 library(cluster)
+library(ggplot2)
+library(ggalluvial)
 
 # K MEANS
 data_to_cluster <- differential_expression_df[most_var_5000[,1], ]
+data_to_cluster_10000 <- differential_expression_df[most_var_10000[,1], ]
 #Set to 3 clusters
 k <- 3
 kmeans_result <- kmeans(data_to_cluster, centers = k)
 kmeans_result
 
-
 # cluster assignments for each sample
 kmeans_cluster_assignments <- kmeans_result$cluster
-
 
 table(kmeans_cluster_assignments)
 
@@ -74,6 +77,40 @@ plot(k_values, sil_widths, type = "b", pch = 19, frame = FALSE,
      xlab = "Number of clusters 'k'", ylab = "Average silhouette width",
      main = "Silhouette Analysis of k-means clustering")
 
+#Test different number of genes
+k <- 3
+gene_values <- c(10, 100, 1000)
+kmeans_genes_results <- list()
+for (g in gene_values) {
+  set.seed(123) # Set seed for reproducibility
+  kmeans_genes_results[[paste(g, "genes", sep = "_")]] <- kmeans(data_to_cluster[1:g, ], centers = k)
+}
+set.seed(123) # Set seed for reproducibility
+kmeans_genes_results[[paste("10000", "genes", sep = "_")]] <- kmeans(data_to_cluster_10000, centers = k)
+
+sample_ids <- rownames(data_to_cluster)
+
+alluvial_data <- do.call(rbind, lapply(names(kmeans_genes_results), function(genes) {
+  data.frame(
+    sample = sample_ids,
+    cluster = kmeans_genes_results[[genes]]$cluster,
+    genes = genes
+  )
+}))
+# Convert 'genes' to factor and specify levels/ordering if needed
+alluvial_data$genes <- factor(alluvial_data$genes, levels = c("10_genes", "100_genes", "1000_genes", "10000_genes"))
+
+# Plot
+ggplot(data = alluvial_data,
+       aes(axis1 = genes, axis2 = cluster)) +
+  geom_alluvium(aes(fill = cluster), width = 1/12) +  # you might adjust width based on your preference
+  geom_stratum(width = 1/12) + 
+  geom_text(stat = "stratum", aes(label = after_stat(stratum)), min.segment.length = 0) +
+  theme_minimal() +
+  labs(title = "Changes in cluster membership across different gene counts",
+       x = "Number of genes used in clustering",
+       y = "Sample count",
+       fill = "Cluster")  # to add legend title
 # ----------------------------------------------------------------------------
 
 # HIERARCHICAL CLUSTERING
