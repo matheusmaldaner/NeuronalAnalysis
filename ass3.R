@@ -98,31 +98,33 @@ for (g in gene_values) {
 set.seed(123) # Set seed for reproducibility
 kmeans_genes_results[[paste("10000", "genes", sep = "_")]] <- kmeans(data_to_cluster_10000, centers = k)
 
-sample_ids <- rownames(data_to_cluster)
-
-alluvial_data <- do.call(rbind, lapply(names(kmeans_genes_results), function(genes) {
+alluvial_data <- do.call(rbind, lapply(names(kmeans_genes_results), function(x) {
   data.frame(
-    sample = sample_ids,
-    cluster = kmeans_genes_results[[genes]]$cluster,
-    genes = genes
+    sample = 1:length(kmeans_genes_results[[x]]$cluster),
+    cluster = kmeans_genes_results[[x]]$cluster,
+    gene_count = x
   )
 }))
-# Convert 'genes' to factor and specify levels/ordering if needed
-alluvial_data$genes <- factor(alluvial_data$genes, levels = c("10_genes", "100_genes", "1000_genes", "10000_genes"))
+alluvial_data$gene_count <- factor(alluvial_data$gene_count, levels = names(kmeans_genes_results))
 
-# Plot
-k_means_alluvial_plot <- ggplot(data = alluvial_data,
-       aes(axis1 = genes, axis2 = cluster)) +
-  geom_alluvium(aes(fill = cluster), width = 1/12) +  # you might adjust width based on your preference
-  geom_stratum(width = 1/12) + 
-  geom_text(stat = "stratum", aes(label = after_stat(stratum)), min.segment.length = 0) +
+alluvial_plot <- ggplot(data = alluvial_data,
+                        aes(axis = gene_count, stratum = cluster, alluvium = sample, 
+                            fill = as.factor(cluster))) +
+  geom_flow(stat = "alluvium", lode.guidance = "rightleft", color = "darkgray") +
+  geom_stratum() + 
+  geom_text(stat = "stratum", aes(label = after_stat(stratum)), size = 3) +
+  scale_x_discrete(limits = levels(alluvial_data$gene_count), 
+                   labels = levels(alluvial_data$gene_count)) +
+  scale_fill_viridis_d(name = "Cluster") + 
   theme_minimal() +
-  labs(title = "Changes in cluster membership across different gene counts",
-       x = "Number of genes used in clustering",
-       y = "Sample count",
-       fill = "Cluster")  # to add legend title
+  labs(title = "Alluvial Diagram of k-means Clustering Across Different Gene Counts",
+       x = "Gene Count",
+       y = "Sample Count",
+       fill = "Cluster") 
 
-ggsave(filename = "~/BioinformaticsProject/plots/k_means_alluvial.png", plot = k_means_alluvial_plot, width = 10, height = 8, dpi = 400)
+print(alluvial_plot)
+
+ggsave(filename = "~/BioinformaticsProject/plots/k_means_alluvial.png", plot = alluvial_plot, width = 10, height = 8, dpi = 400)
 
 # ----------------------------------------------------------------------------
 
