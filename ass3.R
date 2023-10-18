@@ -48,8 +48,8 @@ library(ggplot2)
 library(ggalluvial)
 
 # K MEANS
-data_to_cluster <- differential_expression_df[most_var_5000[,1], ]
-data_to_cluster_10000 <- differential_expression_df[most_var_10000[,1], ]
+data_to_cluster <- gene_expression[most_var_5000[,1], ]
+data_to_cluster_10000 <- gene_expression[most_var_10000[,1], ]
 #Set to 3 clusters
 k <- 3
 kmeans_result <- kmeans(data_to_cluster, centers = k)
@@ -128,7 +128,7 @@ ggsave(filename = "~/BioinformaticsProject/plots/k_means_alluvial.png", plot = k
 # HIERARCHICAL CLUSTERING
 
 # Calculate the distance matrix
-data_to_cluster <- differential_expression_df[most_var_5000[,1], ]
+data_to_cluster <- gene_expression[most_var_5000[,1], ]
 dist_matrix <- dist(data_to_cluster, method = "euclidean")
 
 # Perform hierarchical clustering
@@ -161,7 +161,7 @@ if (!require("BiocManager", quietly = TRUE))
 
 BiocManager::install("ConsensusClusterPlus")
 
-data_to_cluster <- differential_expression_df[most_var_5000[,1], ]
+data_to_cluster <- gene_expression[most_var_5000[,1], ]
 data_matrix <- as.matrix(data_to_cluster)
 
 
@@ -178,7 +178,7 @@ results_5000 <- ConsensusClusterPlus(data_matrix,
 
 
 #results for top 10
-data_top_10 <- differential_expression_df[most_var_5000[1:10, 1], ]
+data_top_10 <- gene_expression[most_var_5000[1:10, 1], ]
 matrix_top_10 <- as.matrix(data_top_10)
 results_10 <- ConsensusClusterPlus(matrix_top_10,
                                      maxK=4, 
@@ -190,7 +190,7 @@ results_10 <- ConsensusClusterPlus(matrix_top_10,
                                      seed=1262118388.71279)
 
 #results for top 100
-data_top_100 <- differential_expression_df[most_var_5000[1:100, 1], ]
+data_top_100 <- gene_expression[most_var_5000[1:100, 1], ]
 matrix_top_100 <- as.matrix(data_top_100)
 results_100 <- ConsensusClusterPlus(matrix_top_100,
                                    maxK=4, 
@@ -202,7 +202,7 @@ results_100 <- ConsensusClusterPlus(matrix_top_100,
                                    seed=1262118388.71279)
 
 #results for top 1000
-data_top_1000 <- differential_expression_df[most_var_5000[1:1000, 1], ]
+data_top_1000 <- gene_expression[most_var_5000[1:1000, 1], ]
 matrix_top_1000 <- as.matrix(data_top_1000)
 results_1000 <- ConsensusClusterPlus(matrix_top_1000,
                                     maxK=4, 
@@ -216,7 +216,7 @@ results_1000 <- ConsensusClusterPlus(matrix_top_1000,
 
 #results for top 10000
 most_var_10000 <- sorted_gene_vars_no_na[1:10000, ]
-data_top_10000 <- differential_expression_df[most_var_10000[1:10000, 1], ]
+data_top_10000 <- gene_expression[most_var_10000[1:10000, 1], ]
 matrix_top_10000 <- as.matrix(data_top_10000)
 results_10000 <- ConsensusClusterPlus(matrix_top_10000,
                                      maxK=4, 
@@ -278,7 +278,7 @@ library(mclust)
 
 
 # performs GMM clustering
-data_to_cluster <- differential_expression_df[most_var_5000[,1], ]
+data_to_cluster <- gene_expression[most_var_5000[,1], ]
 gmm_result <- Mclust(data_to_cluster)
 
 
@@ -304,7 +304,7 @@ library(ggplot2)
 library(FactoMineR)
 
 # performs PCA
-data_matrix <- as.matrix(differential_expression_df[most_var_5000[,1], ])
+data_matrix <- as.matrix(gene_expression[most_var_5000[,1], ])
 pca_result <- PCA(data_matrix, graph = FALSE)
 
 
