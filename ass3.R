@@ -374,19 +374,9 @@ if (!requireNamespace("dendextend", quietly = TRUE)) {
 library(pheatmap)
 library(dendextend)
 
-# Load your data
-# Replace 'your_data_file.csv' with the actual file path to your gene expression data
-data <- data_to_cluster
-
-data
-
-# Create clustering data
-# Replace 'cluster_data.csv' with the actual file path to your clustering results
-cluster_data <- as.data.frame(cluster_results)
-
 # Create a heatmap
-heatmap_data <- data  # Select the first 5000 genes
-sample_groups <- cluster_data$ # Sample groups from Assignment 1
+data_to_cluster <- gene_expression[most_var_5000[,1], ]
+heatmap_data <- data_to_cluster
 
 # Create row and column dendrograms
 row_dend <- as.dendrogram(hclust(dist(heatmap_data)))
@@ -394,21 +384,18 @@ col_dend <- as.dendrogram(hclust(dist(t(heatmap_data))))
 
 # Create annotation data
 annotation_data <- data.frame(
-  Method1 = cluster_data$kmeans_cluster_assignments,
-  Method2 = cluster_data$hclust_cluster_assignments
+  hclust = hclust_cluster_assignments
 )
+colnames(heatmap_data)
 
 # Create the heatmap
 pheatmap(
-  heatmap_data,
-  row_dendrogram = row_dend,
-  col_dendrogram = col_dend,
-  annotation_col = annotation_data,
+  as.matrix(heatmap_data,  rownames.force = TRUE),
+  cluster_rows=TRUE,
+  cluster_cols=TRUE,
   show_colnames = FALSE,  # You can set this to TRUE if you want to display column names
   legend = TRUE,
+  annotation_row = annotation_data, 
   main = "Heatmap of 5,000 Genes",
-  filename = "heatmap.png"  # You can specify the file name and format
+  filename = "heatmap6.png"  # You can specify the file name and format
 )
-
-
-# different types, just label yours...
