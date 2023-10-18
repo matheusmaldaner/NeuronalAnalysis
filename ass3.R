@@ -7,25 +7,22 @@ library(matrixStats)
 
 ## Grab 5000 most variable genes -----------------------------
 # load diff expr results file
-differential_expression_df <- readr::read_tsv("results/SRP094496_diff_expr_results.tsv")
-head(differential_expression_df)
-
 expression_df <- readr::read_tsv("results/mapped_df.tsv")
 metadata_df <- readr::read_tsv("data/SRP094496/metadata_SRP094496.tsv")
 expression_df
 
-differential_expression_df <- expression_df
+gene_expression <- expression_df
 
 # store gene IDs in vars and drop them from main df
 # this is so rowVars works (doesn't work with columsn of val <char>)
-symbol <- differential_expression_df$first_mapped_hugo_id
+symbol <- gene_expression$first_mapped_hugo_id
 Ensembl <- expression_df$Ensembl
-differential_expression_df$first_mapped_hugo_id <- NULL
-differential_expression_df$all_hugo_ids <- NULL
-differential_expression_df$Ensembl <- NULL
+gene_expression$first_mapped_hugo_id <- NULL
+gene_expression$all_hugo_ids <- NULL
+gene_expression$Ensembl <- NULL
 
 # calculate variances for each gene
-gene_variability <- rowVars(as.matrix(differential_expression_df))
+gene_variability <- rowVars(as.matrix(gene_expression))
 
 # bind the variances and gene IDs
 unsorted_gene_vars <- cbind(1:length(symbol), symbol, gene_variability)
