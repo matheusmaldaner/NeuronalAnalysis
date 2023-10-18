@@ -59,7 +59,11 @@ kmeans_result
 # cluster assignments for each sample
 kmeans_cluster_assignments <- kmeans_result$cluster
 
-table(kmeans_cluster_assignments)
+# Convert to data frame for easier CSV writing
+table_df <- as.data.frame(table(kmeans_cluster_assignments))
+
+# Write to CSV
+write.csv(table_df, file = "~/BioinformaticsProject/plots/tables/kmeans_cluster_table.csv", row.names = FALSE)
 
 #Set different k values
 k_values <- c(2, 3, 4, 5, 6)
@@ -88,7 +92,7 @@ plot(k_values, sil_widths, type = "b", pch = 19, frame = FALSE,
 dev.off()
 
 #Test different number of genes
-k <- 3
+k <- 5
 gene_values <- c(10, 100, 1000)
 kmeans_genes_results <- list()
 for (g in gene_values) {
@@ -98,33 +102,39 @@ for (g in gene_values) {
 set.seed(123) # Set seed for reproducibility
 kmeans_genes_results[[paste("10000", "genes", sep = "_")]] <- kmeans(data_to_cluster_10000, centers = k)
 
-alluvial_data <- do.call(rbind, lapply(names(kmeans_genes_results), function(x) {
-  data.frame(
-    sample = 1:length(kmeans_genes_results[[x]]$cluster),
-    cluster = kmeans_genes_results[[x]]$cluster,
-    gene_count = x
-  )
-}))
-alluvial_data$gene_count <- factor(alluvial_data$gene_count, levels = names(kmeans_genes_results))
+cluster_data <- lapply(kmeans_genes_results, function(x) x$cluster)
+names(cluster_data) <- c("kmeans_10", "kmeans_100", "kmeans_1000", "kmeans_10000")  # renaming for clarity
+cluster_df <- as.data.frame(cluster_data)
 
-alluvial_plot <- ggplot(data = alluvial_data,
-                        aes(axis = gene_count, stratum = cluster, alluvium = sample, 
-                            fill = as.factor(cluster))) +
-  geom_flow(stat = "alluvium", lode.guidance = "rightleft", color = "darkgray") +
-  geom_stratum() + 
-  geom_text(stat = "stratum", aes(label = after_stat(stratum)), size = 3) +
-  scale_x_discrete(limits = levels(alluvial_data$gene_count), 
-                   labels = levels(alluvial_data$gene_count)) +
-  scale_fill_viridis_d(name = "Cluster") + 
+library(tidyr)
+
+# Reshaping data for plotting
+cluster_df_long <- cluster_df %>% 
+  pivot_longer(cols = starts_with("kmeans"),
+               names_to = "gene_count",
+               values_to = "cluster")
+
+# Converting cluster to factor
+cluster_df$kmeans_10 <- as.factor(cluster_df$kmeans_10)
+cluster_df$kmeans_100 <- as.factor(cluster_df$kmeans_100)
+cluster_df$kmeans_1000 <- as.factor(cluster_df$kmeans_1000)
+cluster_df$kmeans_10000 <- as.factor(cluster_df$kmeans_10000)
+
+kmeans_alluvial <- ggplot(data = cluster_df,
+                          aes(axis1 = kmeans_10, axis2 = kmeans_100, 
+                              axis3 = kmeans_1000, axis4 = kmeans_10000)) +
+  geom_alluvium(aes(fill = kmeans_10000), width = 1/12) +  # Fill based on final clustering, adjust width as needed
+  geom_stratum(width = 1/12) + 
+  geom_text(stat = "stratum", aes(label = after_stat(stratum)), min.segment.length = 0) +
   theme_minimal() +
-  labs(title = "Alluvial Diagram of k-means Clustering Across Different Gene Counts",
-       x = "Gene Count",
-       y = "Sample Count",
-       fill = "Cluster") 
+  labs(title = "Changes in K-means Cluster Membership Across Different Gene Counts",
+       x = "Number of Genes Used in Clustering",
+       y = "Gene Count",
+       fill = "Cluster")  # To add legend title
 
-print(alluvial_plot)
+print(kmeans_alluvial)
 
-ggsave(filename = "~/BioinformaticsProject/plots/k_means_alluvial.png", plot = alluvial_plot, width = 10, height = 8, dpi = 400)
+ggsave(filename = "~/BioinformaticsProject/plots/k_means_alluvial.png", plot = kmeans_alluvial, width = 10, height = 8, dpi = 400)
 
 # ----------------------------------------------------------------------------
 
