@@ -39,6 +39,7 @@ most_var_5000 <- sorted_gene_vars_no_na[1:5000, ]
 most_var_10000 <- sorted_gene_vars_no_na[1:10000, ]
 most_var_5000
 
+data_to_cluster <- gene_expression[most_var_5000[,1], ]
 # ----------------------------------------------------------------------------
 
 # Clustering
@@ -134,24 +135,52 @@ dist_matrix <- dist(data_to_cluster, method = "euclidean")
 # Perform hierarchical clustering
 hclust_result <- hclust(dist_matrix, method = "complete")
 plot(hclust_result, main = "Hierarchical Clustering Dendrogram", xlab = "Samples")
-hclust_cluster_assignments <- cutree(hclust_result, k=10)
+hclust_cluster_assignments <- cutree(hclust_result, k=50)
 
+cluster_results <- cbind(1:5000, hclust_cluster_assignments)
 table(hclust_cluster_assignments)
 
 # test with 10 genes
 hc <- hclust(dist(data_to_cluster[1:10, ],method="euclidean"),method="complete")
 plot(hc, main = "Hierarchical Clustering Dendrogram", xlab = "Samples")
-table(cutree(hc,k=10))
+hclust_10 <- cutree(hc, h=3000)
+table(hclust_10)
+cluster_results <- cbind(cluster_results, hclust_10)
 
 # test with 100 genes
 hc <- hclust(dist(data_to_cluster[1:100, ],method="euclidean"),method="complete")
 plot(hc, main = "Hierarchical Clustering Dendrogram", xlab = "Samples")
-table(cutree(hc,k=10))
+hclust_100 <- cutree(hc, h=3000)
+table(hclust_100)
+cluster_results <- cbind(cluster_results, hclust_100)
 
 # test w 1000 genes
 hc <- hclust(dist(data_to_cluster[1:1000, ],method="euclidean"),method="complete")
 plot(hc, main = "Hierarchical Clustering Dendrogram", xlab = "Samples")
-table(cutree(hc,k=10))
+hclust_1000 <- cutree(hc, h=3000)
+table(hclust_1000)
+cluster_results <- cbind(cluster_results, hclust_1000)
+
+library(ggplot2)
+library(ggalluvial)
+
+## sankey/alluvial plot
+cluster_results <- as.data.frame(cluster_results)
+cluster_results
+hclust_alluvial <- ggplot(data = cluster_results,
+                                aes(axis1 = hclust_10, axis2 = hclust_100, axis3=hclust_1000, axis4=hclust_cluster_assignments)) +
+  geom_alluvium(aes(fill = hclust_cluster_assignments), width = 1/12) +  # you might adjust width based on your preference
+  geom_stratum(width = 1/12) + 
+  geom_text(stat = "stratum", aes(label = after_stat(stratum)), min.segment.length = 0) +
+  theme_minimal() +
+  labs(title = "Changes in cluster membership across different gene counts",
+       x = "Number of genes used in clustering",
+       y = "Sample count",
+       fill = "Cluster")  # to add legend title
+
+
+
+hclust_alluvial
 
 # ----------------------------------------------------------------------------
 
