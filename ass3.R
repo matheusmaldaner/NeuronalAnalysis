@@ -161,6 +161,13 @@ hclust_1000 <- cutree(hc, h=3000)
 table(hclust_1000)
 cluster_results <- cbind(cluster_results, hclust_1000)
 
+# test w 10000 genes
+# hc <- hclust(dist(data_to_cluster[1:10000, ],method="euclidean"),method="complete")
+# plot(hc, main = "Hierarchical Clustering Dendrogram", xlab = "Samples")
+# hclust_10000 <- cutree(hc, h=3000)
+# table(hclust_10000)
+# cluster_results <- cbind(cluster_results, hclust_10000)
+
 library(ggplot2)
 library(ggalluvial)
 
@@ -171,14 +178,12 @@ hclust_alluvial <- ggplot(data = cluster_results,
                                 aes(axis1 = hclust_10, axis2 = hclust_100, axis3=hclust_1000, axis4=hclust_cluster_assignments)) +
   geom_alluvium(aes(fill = hclust_cluster_assignments), width = 1/12) +  # you might adjust width based on your preference
   geom_stratum(width = 1/12) + 
-  geom_text(stat = "stratum", aes(label = after_stat(stratum)), min.segment.length = 0) +
+  geom_text(stat = "stratum", aes(label = after_stat(stratum))) +
   theme_minimal() +
   labs(title = "Changes in cluster membership across different gene counts",
        x = "Number of genes used in clustering",
        y = "Sample count",
        fill = "Cluster")  # to add legend title
-
-
 
 hclust_alluvial
 
