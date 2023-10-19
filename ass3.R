@@ -1,5 +1,5 @@
 # CHANGE PATH VARIABLE
-#setwd("C:/Users/Matheus/OneDrive/University of Florida/JUNIOR FALL/CGS4144/project")
+setwd("C:/Users/twinb/OneDrive/Desktop/school/uf_fall_23/cgs4144/BioinformaticsProject/")
 
 library(readr)
 library(dplyr)
@@ -39,6 +39,7 @@ most_var_5000 <- sorted_gene_vars_no_na[1:5000, ]
 most_var_10000 <- sorted_gene_vars_no_na[1:10000, ]
 most_var_5000
 
+data_to_cluster <- gene_expression[most_var_5000[,1], ]
 # ----------------------------------------------------------------------------
 
 # Clustering
@@ -48,8 +49,8 @@ library(ggplot2)
 library(ggalluvial)
 
 # K MEANS
-data_to_cluster <- differential_expression_df[most_var_5000[,1], ]
-data_to_cluster_10000 <- differential_expression_df[most_var_10000[,1], ]
+data_to_cluster <- gene_expression[most_var_5000[,1], ]
+data_to_cluster_10000 <- gene_expression[most_var_10000[,1], ]
 #Set to 3 clusters
 k <- 3
 kmeans_result <- kmeans(data_to_cluster, centers = k)
@@ -58,7 +59,13 @@ kmeans_result
 # cluster assignments for each sample
 kmeans_cluster_assignments <- kmeans_result$cluster
 
-table(kmeans_cluster_assignments)
+# Convert to data frame for easier CSV writing
+table_df <- as.data.frame(table(kmeans_cluster_assignments))
+
+# Write to CSV
+write.csv(table_df, file = "~/BioinformaticsProject/plots/tables/kmeans_cluster_table.csv", row.names = FALSE)
+
+cluster_results <- cbind(1:5000, kmeans_cluster_assignments)
 
 #Set different k values
 k_values <- c(2, 3, 4, 5, 6)
@@ -87,7 +94,7 @@ plot(k_values, sil_widths, type = "b", pch = 19, frame = FALSE,
 dev.off()
 
 #Test different number of genes
-k <- 3
+k <- 5
 gene_values <- c(10, 100, 1000)
 kmeans_genes_results <- list()
 for (g in gene_values) {
@@ -97,61 +104,102 @@ for (g in gene_values) {
 set.seed(123) # Set seed for reproducibility
 kmeans_genes_results[[paste("10000", "genes", sep = "_")]] <- kmeans(data_to_cluster_10000, centers = k)
 
-sample_ids <- rownames(data_to_cluster)
+cluster_data <- lapply(kmeans_genes_results, function(x) x$cluster)
+names(cluster_data) <- c("kmeans_10", "kmeans_100", "kmeans_1000", "kmeans_10000")  # renaming for clarity
+cluster_df <- as.data.frame(cluster_data)
 
-alluvial_data <- do.call(rbind, lapply(names(kmeans_genes_results), function(genes) {
-  data.frame(
-    sample = sample_ids,
-    cluster = kmeans_genes_results[[genes]]$cluster,
-    genes = genes
-  )
-}))
-# Convert 'genes' to factor and specify levels/ordering if needed
-alluvial_data$genes <- factor(alluvial_data$genes, levels = c("10_genes", "100_genes", "1000_genes", "10000_genes"))
+library(tidyr)
 
-# Plot
-k_means_alluvial_plot <- ggplot(data = alluvial_data,
-       aes(axis1 = genes, axis2 = cluster)) +
-  geom_alluvium(aes(fill = cluster), width = 1/12) +  # you might adjust width based on your preference
+# Reshaping data for plotting
+cluster_df_long <- cluster_df %>% 
+  pivot_longer(cols = starts_with("kmeans"),
+               names_to = "gene_count",
+               values_to = "cluster")
+
+# Converting cluster to factor
+cluster_df$kmeans_10 <- as.factor(cluster_df$kmeans_10)
+cluster_df$kmeans_100 <- as.factor(cluster_df$kmeans_100)
+cluster_df$kmeans_1000 <- as.factor(cluster_df$kmeans_1000)
+cluster_df$kmeans_10000 <- as.factor(cluster_df$kmeans_10000)
+
+kmeans_alluvial <- ggplot(data = cluster_df,
+                          aes(axis1 = kmeans_10, axis2 = kmeans_100, 
+                              axis3 = kmeans_1000, axis4 = kmeans_10000)) +
+  geom_alluvium(aes(fill = kmeans_10000), width = 1/12) +  # Fill based on final clustering, adjust width as needed
   geom_stratum(width = 1/12) + 
   geom_text(stat = "stratum", aes(label = after_stat(stratum)), min.segment.length = 0) +
   theme_minimal() +
-  labs(title = "Changes in cluster membership across different gene counts",
-       x = "Number of genes used in clustering",
-       y = "Sample count",
-       fill = "Cluster")  # to add legend title
+  labs(title = "Changes in K-means Cluster Membership Across Different Gene Counts",
+       x = "Number of Genes Used in Clustering",
+       y = "Gene Count",
+       fill = "Cluster")  # To add legend title
 
-ggsave(filename = "~/BioinformaticsProject/plots/k_means_alluvial.png", plot = k_means_alluvial_plot, width = 10, height = 8, dpi = 400)
+print(kmeans_alluvial)
+
+ggsave(filename = "~/BioinformaticsProject/plots/k_means_alluvial.png", plot = kmeans_alluvial, width = 10, height = 8, dpi = 400)
 
 # ----------------------------------------------------------------------------
 
 # HIERARCHICAL CLUSTERING
 
 # Calculate the distance matrix
-data_to_cluster <- differential_expression_df[most_var_5000[,1], ]
+data_to_cluster <- gene_expression[most_var_5000[,1], ]
 dist_matrix <- dist(data_to_cluster, method = "euclidean")
 
 # Perform hierarchical clustering
 hclust_result <- hclust(dist_matrix, method = "complete")
 plot(hclust_result, main = "Hierarchical Clustering Dendrogram", xlab = "Samples")
-hclust_cluster_assignments <- cutree(hclust_result, k=10)
+hclust_cluster_assignments <- cutree(hclust_result, k=50)
 
+cluster_results <- cbind(1:5000, hclust_cluster_assignments)
 table(hclust_cluster_assignments)
 
 # test with 10 genes
 hc <- hclust(dist(data_to_cluster[1:10, ],method="euclidean"),method="complete")
 plot(hc, main = "Hierarchical Clustering Dendrogram", xlab = "Samples")
-table(cutree(hc,k=10))
+hclust_10 <- cutree(hc, h=3000)
+table(hclust_10)
+cluster_results <- cbind(cluster_results, hclust_10)
 
 # test with 100 genes
 hc <- hclust(dist(data_to_cluster[1:100, ],method="euclidean"),method="complete")
 plot(hc, main = "Hierarchical Clustering Dendrogram", xlab = "Samples")
-table(cutree(hc,k=10))
+hclust_100 <- cutree(hc, h=3000)
+table(hclust_100)
+cluster_results <- cbind(cluster_results, hclust_100)
 
 # test w 1000 genes
 hc <- hclust(dist(data_to_cluster[1:1000, ],method="euclidean"),method="complete")
 plot(hc, main = "Hierarchical Clustering Dendrogram", xlab = "Samples")
-table(cutree(hc,k=10))
+hclust_1000 <- cutree(hc, h=3000)
+table(hclust_1000)
+cluster_results <- cbind(cluster_results, hclust_1000)
+
+# test w 10000 genes
+# hc <- hclust(dist(data_to_cluster[1:10000, ],method="euclidean"),method="complete")
+# plot(hc, main = "Hierarchical Clustering Dendrogram", xlab = "Samples")
+# hclust_10000 <- cutree(hc, h=3000)
+# table(hclust_10000)
+# cluster_results <- cbind(cluster_results, hclust_10000)
+
+library(ggplot2)
+library(ggalluvial)
+
+## sankey/alluvial plot
+cluster_results <- as.data.frame(cluster_results)
+cluster_results
+hclust_alluvial <- ggplot(data = cluster_results,
+                                aes(axis1 = hclust_10, axis2 = hclust_100, axis3=hclust_1000, axis4=hclust_cluster_assignments)) +
+  geom_alluvium(aes(fill = hclust_cluster_assignments), width = 1/12) +  # you might adjust width based on your preference
+  geom_stratum(width = 1/12) + 
+  geom_text(stat = "stratum", aes(label = after_stat(stratum))) +
+  theme_minimal() +
+  labs(title = "Changes in cluster membership across different gene counts",
+       x = "Number of genes used in clustering",
+       y = "Sample count",
+       fill = "Cluster")  # to add legend title
+
+hclust_alluvial
 
 # ----------------------------------------------------------------------------
 
@@ -161,7 +209,7 @@ if (!require("BiocManager", quietly = TRUE))
 
 BiocManager::install("ConsensusClusterPlus")
 
-data_to_cluster <- differential_expression_df[most_var_5000[,1], ]
+data_to_cluster <- gene_expression[most_var_5000[,1], ]
 data_matrix <- as.matrix(data_to_cluster)
 
 
@@ -178,7 +226,7 @@ results_5000 <- ConsensusClusterPlus(data_matrix,
 
 
 #results for top 10
-data_top_10 <- differential_expression_df[most_var_5000[1:10, 1], ]
+data_top_10 <- gene_expression[most_var_5000[1:10, 1], ]
 matrix_top_10 <- as.matrix(data_top_10)
 results_10 <- ConsensusClusterPlus(matrix_top_10,
                                      maxK=4, 
@@ -190,7 +238,7 @@ results_10 <- ConsensusClusterPlus(matrix_top_10,
                                      seed=1262118388.71279)
 
 #results for top 100
-data_top_100 <- differential_expression_df[most_var_5000[1:100, 1], ]
+data_top_100 <- gene_expression[most_var_5000[1:100, 1], ]
 matrix_top_100 <- as.matrix(data_top_100)
 results_100 <- ConsensusClusterPlus(matrix_top_100,
                                    maxK=4, 
@@ -202,7 +250,7 @@ results_100 <- ConsensusClusterPlus(matrix_top_100,
                                    seed=1262118388.71279)
 
 #results for top 1000
-data_top_1000 <- differential_expression_df[most_var_5000[1:1000, 1], ]
+data_top_1000 <- gene_expression[most_var_5000[1:1000, 1], ]
 matrix_top_1000 <- as.matrix(data_top_1000)
 results_1000 <- ConsensusClusterPlus(matrix_top_1000,
                                     maxK=4, 
@@ -216,7 +264,7 @@ results_1000 <- ConsensusClusterPlus(matrix_top_1000,
 
 #results for top 10000
 most_var_10000 <- sorted_gene_vars_no_na[1:10000, ]
-data_top_10000 <- differential_expression_df[most_var_10000[1:10000, 1], ]
+data_top_10000 <- gene_expression[most_var_10000[1:10000, 1], ]
 matrix_top_10000 <- as.matrix(data_top_10000)
 results_10000 <- ConsensusClusterPlus(matrix_top_10000,
                                      maxK=4, 
@@ -278,7 +326,7 @@ library(mclust)
 
 
 # performs GMM clustering
-data_to_cluster <- differential_expression_df[most_var_5000[,1], ]
+data_to_cluster <- gene_expression[most_var_5000[,1], ]
 gmm_result <- Mclust(data_to_cluster)
 
 
@@ -304,7 +352,7 @@ library(ggplot2)
 library(FactoMineR)
 
 # performs PCA
-data_matrix <- as.matrix(differential_expression_df[most_var_5000[,1], ])
+data_matrix <- as.matrix(gene_expression[most_var_5000[,1], ])
 pca_result <- PCA(data_matrix, graph = FALSE)
 
 
@@ -327,9 +375,39 @@ ggplot(pca_data, aes(x = PC1, y = PC2, color = Cluster)) +
 
 # HEATMAP
 
-# Install and load the pheatmap package
-install.packages("pheatmap")
+# Install and load necessary packages
+if (!requireNamespace("pheatmap", quietly = TRUE)) {
+  install.packages("pheatmap")
+}
+if (!requireNamespace("dendextend", quietly = TRUE)) {
+  install.packages("dendextend")
+}
+
 library(pheatmap)
+library(dendextend)
 
+# Create a heatmap
+data_to_cluster <- gene_expression[most_var_5000[,1], ]
+heatmap_data <- data_to_cluster
 
-# different types, just label yours...
+# Create row and column dendrograms
+row_dend <- as.dendrogram(hclust(dist(heatmap_data)))
+col_dend <- as.dendrogram(hclust(dist(t(heatmap_data))))
+
+# Create annotation data
+annotation_data <- data.frame(
+  hclust = hclust_cluster_assignments
+)
+colnames(heatmap_data)
+
+# Create the heatmap
+pheatmap(
+  as.matrix(heatmap_data,  rownames.force = TRUE),
+  cluster_rows=TRUE,
+  cluster_cols=TRUE,
+  show_colnames = FALSE,  # You can set this to TRUE if you want to display column names
+  legend = TRUE,
+  annotation_row = annotation_data, 
+  main = "Heatmap of 5,000 Genes",
+  filename = "heatmap6.png"  # You can specify the file name and format
+)
