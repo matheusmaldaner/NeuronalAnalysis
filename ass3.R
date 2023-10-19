@@ -1,5 +1,5 @@
 # CHANGE PATH VARIABLE
-#setwd("C:/Users/Matheus/OneDrive/University of Florida/JUNIOR FALL/CGS4144/project")
+setwd("C:/Users/twinb/OneDrive/Desktop/school/uf_fall_23/cgs4144/BioinformaticsProject/")
 
 library(readr)
 library(dplyr)
@@ -64,6 +64,8 @@ table_df <- as.data.frame(table(kmeans_cluster_assignments))
 
 # Write to CSV
 write.csv(table_df, file = "~/BioinformaticsProject/plots/tables/kmeans_cluster_table.csv", row.names = FALSE)
+
+cluster_results <- cbind(1:5000, kmeans_cluster_assignments)
 
 #Set different k values
 k_values <- c(2, 3, 4, 5, 6)
@@ -373,9 +375,39 @@ ggplot(pca_data, aes(x = PC1, y = PC2, color = Cluster)) +
 
 # HEATMAP
 
-# Install and load the pheatmap package
-install.packages("pheatmap")
+# Install and load necessary packages
+if (!requireNamespace("pheatmap", quietly = TRUE)) {
+  install.packages("pheatmap")
+}
+if (!requireNamespace("dendextend", quietly = TRUE)) {
+  install.packages("dendextend")
+}
+
 library(pheatmap)
+library(dendextend)
 
+# Create a heatmap
+data_to_cluster <- gene_expression[most_var_5000[,1], ]
+heatmap_data <- data_to_cluster
 
-# different types, just label yours...
+# Create row and column dendrograms
+row_dend <- as.dendrogram(hclust(dist(heatmap_data)))
+col_dend <- as.dendrogram(hclust(dist(t(heatmap_data))))
+
+# Create annotation data
+annotation_data <- data.frame(
+  hclust = hclust_cluster_assignments
+)
+colnames(heatmap_data)
+
+# Create the heatmap
+pheatmap(
+  as.matrix(heatmap_data,  rownames.force = TRUE),
+  cluster_rows=TRUE,
+  cluster_cols=TRUE,
+  show_colnames = FALSE,  # You can set this to TRUE if you want to display column names
+  legend = TRUE,
+  annotation_row = annotation_data, 
+  main = "Heatmap of 5,000 Genes",
+  filename = "heatmap6.png"  # You can specify the file name and format
+)
