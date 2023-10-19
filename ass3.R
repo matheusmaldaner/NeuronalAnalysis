@@ -391,24 +391,14 @@ if (!requireNamespace("dendextend", quietly = TRUE)) {
 
 library(pheatmap)
 library(dendextend)
-<<<<<<< HEAD
-
-# Create a heatmap
-data_to_cluster <- gene_expression[most_var_5000[,1], ]
-heatmap_data <- data_to_cluster
-=======
->>>>>>> 41e0c5382b3cc4e9dfeaabc838d60a2a26fc1c44
 
 # Create a heatmap
 data_to_cluster <- gene_expression[most_var_5000[,1], ]
 heatmap_data <- data_to_cluster
 
-<<<<<<< HEAD
 # different types, just label yours...
 
 
-=======
->>>>>>> 41e0c5382b3cc4e9dfeaabc838d60a2a26fc1c44
 # Create row and column dendrograms
 row_dend <- as.dendrogram(hclust(dist(heatmap_data)))
 col_dend <- as.dendrogram(hclust(dist(t(heatmap_data))))
@@ -430,7 +420,7 @@ pheatmap(
   main = "Heatmap of 5,000 Genes",
   filename = "heatmap6.png"  # You can specify the file name and format
 )
-<<<<<<< HEAD
+
 # ----------------------------------------------------------------------------
 
 # Statistics 
@@ -439,5 +429,3 @@ pheatmap(
 
 # CCP
 
-=======
->>>>>>> 41e0c5382b3cc4e9dfeaabc838d60a2a26fc1c44
