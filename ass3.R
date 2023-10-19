@@ -568,18 +568,19 @@ test_result_10 <- chisq.test(contingency_table)
 print(test_result)
 
 ###
+all_original_p_values <- c(test_result_10$p.value, test_result_100$p.value, 
+                           test_result_1000$p.value, test_result_5000$p.value)
 
-original_p_value <- test_result$p.value
-adjusted_p_value_bonferroni <- p.adjust(original_p_value, method = "bonferroni")
-adjusted_p_value_holm <- p.adjust(original_p_value, method = "holm")
-adjusted_p_value_BH <- p.adjust(original_p_value, method = "BH")
+adjusted_p_values_bonferroni <- p.adjust(all_original_p_values, method = "bonferroni")
+adjusted_p_values_holm <- p.adjust(all_original_p_values, method = "holm")
+adjusted_p_values_BH <- p.adjust(all_original_p_values, method = "BH")
 
-adjusted_results <- data.frame(
-  Original_P_Value = original_p_value,
-  Bonferroni_Adjusted = adjusted_p_value_bonferroni,
-  Holm_Adjusted = adjusted_p_value_holm,
-  BH_Adjusted = adjusted_p_value_BH
+results_table <- data.frame(
+  Variation = c("10", "100", "1000", "5000"),
+  Original_P_Values = all_original_p_values,
+  Bonferroni_Adjusted = adjusted_p_values_bonferroni,
+  Holm_Adjusted = adjusted_p_values_holm,
+  BH_Adjusted = adjusted_p_values_BH
 )
 
-print(adjusted_results)
 
