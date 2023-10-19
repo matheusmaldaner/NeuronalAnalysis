@@ -249,7 +249,7 @@ library(ggalluvial)
 cluster_results <- as.data.frame(cluster_results)
 cluster_results
 hclust_alluvial <- ggplot(data = cluster_results,
-                                aes(axis1 = hclust_10, axis2 = hclust_100, axis3=hclust_1000, axis4=hclust_cluster_assignments)) +
+                          aes(axis1 = hclust_10, axis2 = hclust_100, axis3=hclust_1000, axis4=hclust_cluster_assignments)) +
   geom_alluvium(aes(fill = hclust_cluster_assignments), width = 1/12) +  # you might adjust width based on your preference
   geom_stratum(width = 1/12) + 
   geom_text(stat = "stratum", aes(label = after_stat(stratum))) +
@@ -274,43 +274,31 @@ data_matrix = as.dist(1 - cor(t(data_to_cluster), method="pearson"))
 #results for top 5000
 library(ConsensusClusterPlus)
 results_5000 <- ConsensusClusterPlus(data_matrix,
-                                maxK=3, 
-                                reps=50, 
-                                pItem=0.8, 
-                                pFeature=1, 
-                                clusterAlg="hc", 
-                                distance="pearson",
-                                seed=12345)
+                                     maxK=3, 
+                                     reps=50, 
+                                     pItem=0.8, 
+                                     pFeature=1, 
+                                     clusterAlg="hc", 
+                                     distance="pearson",
+                                     seed=12345)
 
 
 #results for top 10
 data_top_10 <- gene_expression[most_var_5000[1:10, 1], ]
 matrix_top_10 = as.dist(1 - cor(t(data_top_10), method="pearson"))
 results_10 <- ConsensusClusterPlus(matrix_top_10,
-                                     maxK=3,
-                                     reps=50,
-                                     pItem=0.8,
-                                     pFeature=1,
-                                     clusterAlg="hc",
-                                     distance="pearson",
-                                     seed=12345)
+                                   maxK=3,
+                                   reps=50,
+                                   pItem=0.8,
+                                   pFeature=1,
+                                   clusterAlg="hc",
+                                   distance="pearson",
+                                   seed=12345)
 
 #results for top 100
 data_top_100 <- gene_expression[most_var_5000[1:100, 1], ]
 matrix_top_100 = as.dist(1 - cor(t(data_top_100), method="pearson"))
 results_100 <- ConsensusClusterPlus(matrix_top_100,
-                                   maxK=3, 
-                                   reps=50, 
-                                   pItem=0.8, 
-                                   pFeature=1, 
-                                   clusterAlg="hc", 
-                                   distance="pearson",
-                                   seed=12345)
-
-#results for top 1000
-data_top_1000 <- gene_expression[most_var_5000[1:1000, 1], ]
-matrix_top_1000 = as.dist(1 - cor(t(data_top_1000), method="pearson"))
-results_1000 <- ConsensusClusterPlus(matrix_top_1000,
                                     maxK=3, 
                                     reps=50, 
                                     pItem=0.8, 
@@ -319,19 +307,31 @@ results_1000 <- ConsensusClusterPlus(matrix_top_1000,
                                     distance="pearson",
                                     seed=12345)
 
+#results for top 1000
+data_top_1000 <- gene_expression[most_var_5000[1:1000, 1], ]
+matrix_top_1000 = as.dist(1 - cor(t(data_top_1000), method="pearson"))
+results_1000 <- ConsensusClusterPlus(matrix_top_1000,
+                                     maxK=3, 
+                                     reps=50, 
+                                     pItem=0.8, 
+                                     pFeature=1, 
+                                     clusterAlg="hc", 
+                                     distance="pearson",
+                                     seed=12345)
+
 
 #results for top 10000
 most_var_10000 <- sorted_gene_vars_no_na[1:10000, ]
 data_top_10000 <- gene_expression[most_var_10000[1:10000, 1], ]
 matrix_top_10000 = as.dist(1 - cor(t(data_top_10000), method="pearson"))
 results_10000 <- ConsensusClusterPlus(matrix_top_10000,
-                                     maxK=3, 
-                                     reps=1, 
-                                     pItem=0.5, 
-                                     pFeature=1, 
-                                     clusterAlg="hc", 
-                                     distance="pearson",
-                                     seed=12345)
+                                      maxK=3, 
+                                      reps=1, 
+                                      pItem=0.5, 
+                                      pFeature=1, 
+                                      clusterAlg="hc", 
+                                      distance="pearson",
+                                      seed=12345)
 
 
 #alluvial plot
@@ -367,7 +367,7 @@ library(ggplot2)
 library(ggalluvial)
 
 ccp_alluvial <- ggplot(data = data, 
-       aes(axis1 = assignment_10, axis2 = assignment_100, axis3 = assignment_1000, axis4 = assignment_5000, axis5 = assignment_10000)) +
+                       aes(axis1 = assignment_10, axis2 = assignment_100, axis3 = assignment_1000, axis4 = assignment_5000, axis5 = assignment_10000)) +
   geom_alluvium(aes(fill = assignment_5000), width = 1/12) +
   geom_stratum() +
   geom_text(stat = "stratum", aes(label = after_stat(stratum))) +
@@ -386,28 +386,65 @@ ggsave(filename = "~/BioinformaticsProject/plots/ccp_alluvial.png", plot = ccp_a
 
 # GAUSSIAN MIXTURE MODELS
 
-# installs and loads mclust package
-install.packages("mclust")
-library(mclust)
+# this is needed for the assignment 1 groups
+
+# basically the stuff we did in previous assignments
+data_dir <- file.path("data", "SRP094496")
+metadata_file <- file.path(data_dir, "metadata_SRP094496.tsv")
+metadata <- readr::read_tsv(metadata_file)
 
 
-# performs GMM clustering
-data_to_cluster <- gene_expression[most_var_5000[,1], ]
-gmm_result <- Mclust(data_to_cluster)
+metadata <- metadata %>%
+  dplyr::mutate(title_status = dplyr::case_when(
+    stringr::str_detect(refinebio_title, "PM-\\d+") ~ "PM",
+    TRUE ~ "other"
+  ))
+
+assignment1_groups <- metadata$title_status
 
 
-# prints the clustering results
-summary(gmm_result)
+# initializes a matrix to store the p-values
+num_clusters <- length(cluster_df_gmm)
+p_values <- matrix(nrow=num_clusters, ncol=2, dimnames=list(names(cluster_df_gmm), c("Unadjusted", "Adjusted")))
 
 
-# number of clusters identified
-num_clusters <- gmm_result$G
-cat("Number of clusters identified by GMM:", num_clusters, "\n")
+# this is needed because the lengths have to match
+subset_assignment1_groups <- assignment1_groups[1:1000]
 
 
-# cluster assignments for each sample
-gmm_cluster_assignments <- gmm_result$classification
-table(gmm_cluster_assignments)
+# performs the chi-squared test for each clustering result
+for (i in 1:num_clusters) {
+  # makes sure it is the same length
+  if (length(cluster_df_gmm[[i]]) != length(subset_assignment1_groups)) {
+    stop(paste0("Length mismatch for cluster ", i, "."))
+  }
+  
+  
+  # creates table for chi-squared test
+  table_data <- table(cluster_df_gmm[[i]], subset_assignment1_groups)
+  
+  
+  # actual chi-squared test
+  chi_sq_test <- chisq.test(table_data)
+  
+  
+  # stores the unadjusted p-value
+  p_values[i, "Unadjusted"] <- chi_sq_test$p.value
+}
+
+
+# adjusts the p-values for multiple hypothesis testing
+p_values[, "Adjusted"] <- p.adjust(p_values[, "Unadjusted"], method = "BH")
+
+
+# converts to data frame for visualization
+p_values_df <- as.data.frame(p_values)
+
+
+# displays the table of p-values
+print(p_values_df)
+
+
 
 # ----------------------------------------------------------------------------
 
@@ -642,5 +679,174 @@ results_table <- data.frame(
   Holm_Adjusted = adjusted_p_values_holm,
   BH_Adjusted = adjusted_p_values_BH
 )
+
+
+
+
+
+
+# ---------------------------------------------------------------
+# GMM
+
+
+# this is needed for the assignment 1 groups
+
+# basically the stuff we did in previous assignments
+data_dir <- file.path("data", "SRP094496")
+metadata_file <- file.path(data_dir, "metadata_SRP094496.tsv")
+metadata <- readr::read_tsv(metadata_file)
+
+
+metadata <- metadata %>%
+  dplyr::mutate(title_status = dplyr::case_when(
+    stringr::str_detect(refinebio_title, "PM-\\d+") ~ "PM",
+    TRUE ~ "other"
+  ))
+
+assignment1_groups <- metadata$title_status
+
+
+# initializes a matrix to store the p-values
+num_clusters <- length(cluster_df_gmm)
+p_values <- matrix(nrow=num_clusters, ncol=2, dimnames=list(names(cluster_df_gmm), c("Unadjusted", "Adjusted")))
+
+
+# this is needed because the lengths have to match
+subset_assignment1_groups <- assignment1_groups[1:1000]
+
+
+# performs the chi-squared test for each clustering result
+for (i in 1:num_clusters) {
+  # makes sure it is the same length
+  if (length(cluster_df_gmm[[i]]) != length(subset_assignment1_groups)) {
+    stop(paste0("Length mismatch for cluster ", i, "."))
+  }
+  
+  
+  # creates table for chi-squared test
+  table_data <- table(cluster_df_gmm[[i]], subset_assignment1_groups)
+  
+  
+  # actual chi-squared test
+  chi_sq_test <- chisq.test(table_data)
+  
+  
+  # stores the unadjusted p-value
+  p_values[i, "Unadjusted"] <- chi_sq_test$p.value
+}
+
+
+# adjusts the p-values for multiple hypothesis testing
+p_values[, "Adjusted"] <- p.adjust(p_values[, "Unadjusted"], method = "BH")
+
+
+# converts to data frame for visualization
+p_values_df <- as.data.frame(p_values)
+
+
+# displays the table of p-values
+print(p_values_df)
+
+
+# ---------------------------------------------------------------
+# HCLUST
+
+
+# For 10 genes
+dist_matrix_10 <- dist(data_to_cluster[1:10, ], method="euclidean")
+hc_10 <- hclust(dist_matrix_10, method="complete")
+hclust_10 <- cutree(hc_10, k=min(10, nrow(data_to_cluster[1:10, ])))
+
+# For 100 genes
+dist_matrix_100 <- dist(data_to_cluster[1:100, ], method="euclidean")
+hc_100 <- hclust(dist_matrix_100, method="complete")
+hclust_100 <- cutree(hc_100, k=min(10, nrow(data_to_cluster[1:100, ])))
+
+# For 1000 genes
+dist_matrix_1000 <- dist(data_to_cluster[1:1000, ], method="euclidean")
+hc_1000 <- hclust(dist_matrix_1000, method="complete")
+hclust_1000 <- cutree(hc_1000, k=min(10, nrow(data_to_cluster[1:1000, ])))
+
+# For all 5000 genes
+dist_matrix_all <- dist(data_to_cluster, method="euclidean")
+hc_all <- hclust(dist_matrix_all, method="complete")
+hclust_all <- cutree(hc_all, k=min(10, nrow(data_to_cluster)))
+
+library(ggplot2)
+
+# ---------------------------------------------------------------
+
+
+
+# Create a list of hierarchical clustering results
+cluster_df_hclust <- list(
+  hclust_10 = hclust_10,
+  hclust_100 = hclust_100,
+  hclust_1000 = hclust_1000,
+  hclust_all = hclust_cluster_assignments
+)
+
+
+# basically the stuff we did in previous assignments
+data_dir <- file.path("data", "SRP094496")
+metadata_file <- file.path(data_dir, "metadata_SRP094496.tsv")
+metadata <- readr::read_tsv(metadata_file)
+
+
+
+# This is the same metadata processing and creation of assignment1_groups as before
+metadata <- metadata %>%
+  dplyr::mutate(title_status = dplyr::case_when(
+    stringr::str_detect(refinebio_title, "PM-\\d+") ~ "PM",
+    TRUE ~ "other"
+  ))
+
+assignment1_groups <- metadata$title_status
+
+# Initialize a matrix to store the p-values
+num_clusters <- length(cluster_df_hclust)
+p_values <- matrix(nrow=num_clusters, ncol=2, dimnames=list(names(cluster_df_hclust), c("Unadjusted", "Adjusted")))
+
+
+
+# Subset assignment1_groups for comparison with clustering results
+subset_assignment1_groups <- assignment1_groups[1:length(hclust_cluster_assignments)]  # Adjusted this length
+
+
+for (i in 1:num_clusters) {
+  if (length(cluster_df_hclust[[i]]) < length(subset_assignment1_groups)) {
+    # Append a constant value, e.g., 1, to the end of the shorter vector until its length matches
+    cluster_df_hclust[[i]] <- c(cluster_df_hclust[[i]], rep(1, length(subset_assignment1_groups) - length(cluster_df_hclust[[i]])))
+  }
+}
+
+length(cluster_df_hclust[[i]])
+length(subset_assignment1_groups)
+
+# Perform chi-squared test for each clustering result
+for (i in 1:num_clusters) {
+  # Check for length mismatch
+  if (length(cluster_df_hclust[[i]]) != length(subset_assignment1_groups)) {
+    stop(paste0("Length mismatch for cluster ", i, "."))
+  }
+  
+  # Create table for chi-squared test
+  table_data <- table(cluster_df_hclust[[i]], subset_assignment1_groups)
+  
+  # Perform chi-squared test
+  chi_sq_test <- chisq.test(table_data)
+  
+  # Store the unadjusted p-value
+  p_values[i, "Unadjusted"] <- chi_sq_test$p.value
+}
+
+# Adjust p-values for multiple hypothesis testing
+p_values[, "Adjusted"] <- p.adjust(p_values[, "Unadjusted"], method = "BH")
+
+# Convert to data frame for visualization
+p_values_df <- as.data.frame(p_values)
+
+# Display the table of p-values
+print(p_values_df)
 
 
