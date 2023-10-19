@@ -461,8 +461,113 @@ long_final_df <- final_df %>%
 merged_final_df <- merge(long_final_df, metadata, by = "refinebio_accession_code")
 
 contingency_table <- table(merged_final_df$Cluster, merged_final_df$title_status)
-test_result <- chisq.test(contingency_table)
+test_result_5000 <- chisq.test(contingency_table)
 print(test_result)
+
+###
+cluster_assignments <- results_1000[[3]]$consensusClass
+
+most_var_1000 <- sorted_gene_vars_no_na[1:1000, ]
+gene_names <- most_var_1000[, 2]
+head(gene_names)
+cluster_df <- data.frame(first_mapped_hugo_id = gene_names, Cluster = cluster_assignments)
+merged_df <- merge(cluster_df, expression_df, by="first_mapped_hugo_id")
+head(merged_df)
+metadata <- metadata %>%
+  dplyr::mutate(title_status = dplyr::case_when(
+    stringr::str_detect(refinebio_title, "PM-\\d+") ~ "PM",
+    TRUE ~ "other"
+  ))
+
+library(tidyr)
+
+df_averaged <- merged_df %>%
+  group_by(first_mapped_hugo_id) %>%
+  summarise(across(where(is.numeric), ~mean(.x, na.rm = TRUE)), .groups = 'drop')
+
+final_df <- df_averaged %>%
+  tibble::column_to_rownames("first_mapped_hugo_id")
+head(final_df)
+final_df$Gene <- rownames(final_df)
+
+long_final_df <- final_df %>%
+  tidyr::gather(key = "refinebio_accession_code", value = "Expression_Value", -Cluster, -Gene)
+merged_final_df <- merge(long_final_df, metadata, by = "refinebio_accession_code")
+
+contingency_table <- table(merged_final_df$Cluster, merged_final_df$title_status)
+test_result_1000 <- chisq.test(contingency_table)
+print(test_result)
+
+###
+cluster_assignments <- results_100[[3]]$consensusClass
+
+most_var_100 <- sorted_gene_vars_no_na[1:100, ]
+gene_names <- most_var_100[, 2]
+head(gene_names)
+cluster_df <- data.frame(first_mapped_hugo_id = gene_names, Cluster = cluster_assignments)
+merged_df <- merge(cluster_df, expression_df, by="first_mapped_hugo_id")
+head(merged_df)
+metadata <- metadata %>%
+  dplyr::mutate(title_status = dplyr::case_when(
+    stringr::str_detect(refinebio_title, "PM-\\d+") ~ "PM",
+    TRUE ~ "other"
+  ))
+
+library(tidyr)
+
+df_averaged <- merged_df %>%
+  group_by(first_mapped_hugo_id) %>%
+  summarise(across(where(is.numeric), ~mean(.x, na.rm = TRUE)), .groups = 'drop')
+
+final_df <- df_averaged %>%
+  tibble::column_to_rownames("first_mapped_hugo_id")
+head(final_df)
+final_df$Gene <- rownames(final_df)
+
+long_final_df <- final_df %>%
+  tidyr::gather(key = "refinebio_accession_code", value = "Expression_Value", -Cluster, -Gene)
+merged_final_df <- merge(long_final_df, metadata, by = "refinebio_accession_code")
+
+contingency_table <- table(merged_final_df$Cluster, merged_final_df$title_status)
+test_result_100 <- chisq.test(contingency_table)
+print(test_result)
+
+###
+
+cluster_assignments <- results_10[[3]]$consensusClass
+
+most_var_10 <- sorted_gene_vars_no_na[1:10, ]
+gene_names <- most_var_10[, 2]
+head(gene_names)
+cluster_df <- data.frame(first_mapped_hugo_id = gene_names, Cluster = cluster_assignments)
+merged_df <- merge(cluster_df, expression_df, by="first_mapped_hugo_id")
+head(merged_df)
+metadata <- metadata %>%
+  dplyr::mutate(title_status = dplyr::case_when(
+    stringr::str_detect(refinebio_title, "PM-\\d+") ~ "PM",
+    TRUE ~ "other"
+  ))
+
+library(tidyr)
+
+df_averaged <- merged_df %>%
+  group_by(first_mapped_hugo_id) %>%
+  summarise(across(where(is.numeric), ~mean(.x, na.rm = TRUE)), .groups = 'drop')
+
+final_df <- df_averaged %>%
+  tibble::column_to_rownames("first_mapped_hugo_id")
+head(final_df)
+final_df$Gene <- rownames(final_df)
+
+long_final_df <- final_df %>%
+  tidyr::gather(key = "refinebio_accession_code", value = "Expression_Value", -Cluster, -Gene)
+merged_final_df <- merge(long_final_df, metadata, by = "refinebio_accession_code")
+
+contingency_table <- table(merged_final_df$Cluster, merged_final_df$title_status)
+test_result_10 <- chisq.test(contingency_table)
+print(test_result)
+
+###
 
 original_p_value <- test_result$p.value
 adjusted_p_value_bonferroni <- p.adjust(original_p_value, method = "bonferroni")
