@@ -52,7 +52,7 @@ library(ggalluvial)
 data_to_cluster <- gene_expression[most_var_5000[,1], ]
 data_to_cluster_10000 <- gene_expression[most_var_10000[,1], ]
 #Set to 3 clusters
-k <- 3
+k <- 5
 kmeans_result <- kmeans(data_to_cluster, centers = k)
 kmeans_result
 
@@ -176,11 +176,11 @@ table(hclust_1000)
 cluster_results <- cbind(cluster_results, hclust_1000)
 
 # test w 10000 genes
-# hc <- hclust(dist(data_to_cluster[1:10000, ],method="euclidean"),method="complete")
-# plot(hc, main = "Hierarchical Clustering Dendrogram", xlab = "Samples")
-# hclust_10000 <- cutree(hc, h=3000)
-# table(hclust_10000)
-# cluster_results <- cbind(cluster_results, hclust_10000)
+hc <- hclust(dist(data_to_cluster[1:10000, ],method="euclidean"),method="complete")
+plot(hc, main = "Hierarchical Clustering Dendrogram", xlab = "Samples")
+hclust_10000 <- cutree(hc, k=50)
+table(hclust_10000)
+cluster_results <- cbind(cluster_results, hclust_10000)
 
 library(ggplot2)
 library(ggalluvial)
@@ -189,7 +189,7 @@ library(ggalluvial)
 cluster_results <- as.data.frame(cluster_results)
 cluster_results
 hclust_alluvial <- ggplot(data = cluster_results,
-                                aes(axis1 = hclust_10, axis2 = hclust_100, axis3=hclust_1000, axis4=hclust_cluster_assignments)) +
+                                aes(axis1 = hclust_10, axis2 = hclust_100, axis3=hclust_1000, axis4=hclust_10000)) +
   geom_alluvium(aes(fill = hclust_cluster_assignments), width = 1/12) +  # you might adjust width based on your preference
   geom_stratum(width = 1/12) + 
   geom_text(stat = "stratum", aes(label = after_stat(stratum))) +
@@ -396,7 +396,8 @@ col_dend <- as.dendrogram(hclust(dist(t(heatmap_data))))
 
 # Create annotation data
 annotation_data <- data.frame(
-  hclust = hclust_cluster_assignments
+  hclust = hclust_cluster_assignments,
+  kmeans = kmeans_cluster_assignments
 )
 colnames(heatmap_data)
 
