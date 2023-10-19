@@ -429,3 +429,52 @@ pheatmap(
 
 # CCP
 
+head(results_5000)
+
+cluster_assignments <- results_5000[[3]]$consensusClass
+
+most_var_5000 <- sorted_gene_vars_no_na[1:5000, ]
+gene_names <- most_var_5000[, 2]
+head(gene_names)
+cluster_df <- data.frame(first_mapped_hugo_id = gene_names, Cluster = cluster_assignments)
+merged_df <- merge(cluster_df, expression_df, by="first_mapped_hugo_id")
+head(merged_df)
+metadata <- metadata %>%
+  dplyr::mutate(title_status = dplyr::case_when(
+    stringr::str_detect(refinebio_title, "PM-\\d+") ~ "PM",
+    TRUE ~ "other"
+  ))
+
+library(tidyr)
+
+df_averaged <- merged_df %>%
+  group_by(first_mapped_hugo_id) %>%
+  summarise(across(where(is.numeric), ~mean(.x, na.rm = TRUE)), .groups = 'drop')
+
+final_df <- df_averaged %>%
+  tibble::column_to_rownames("first_mapped_hugo_id")
+head(final_df)
+final_df$Gene <- rownames(final_df)
+
+long_final_df <- final_df %>%
+  tidyr::gather(key = "refinebio_accession_code", value = "Expression_Value", -Cluster, -Gene)
+merged_final_df <- merge(long_final_df, metadata, by = "refinebio_accession_code")
+
+contingency_table <- table(merged_final_df$Cluster, merged_final_df$title_status)
+test_result <- chisq.test(contingency_table)
+print(test_result)
+
+original_p_value <- test_result$p.value
+adjusted_p_value_bonferroni <- p.adjust(original_p_value, method = "bonferroni")
+adjusted_p_value_holm <- p.adjust(original_p_value, method = "holm")
+adjusted_p_value_BH <- p.adjust(original_p_value, method = "BH")
+
+adjusted_results <- data.frame(
+  Original_P_Value = original_p_value,
+  Bonferroni_Adjusted = adjusted_p_value_bonferroni,
+  Holm_Adjusted = adjusted_p_value_holm,
+  BH_Adjusted = adjusted_p_value_BH
+)
+
+print(adjusted_results)
+
