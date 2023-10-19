@@ -136,6 +136,66 @@ print(kmeans_alluvial)
 
 ggsave(filename = "~/BioinformaticsProject/plots/k_means_alluvial.png", plot = kmeans_alluvial, width = 10, height = 8, dpi = 400)
 
+#Chi Squared Section
+
+# basically the stuff we did in previous assignments
+data_dir <- file.path("data", "SRP094496")
+metadata_file <- file.path(data_dir, "metadata_SRP094496.tsv")
+metadata <- readr::read_tsv(metadata_file)
+
+
+metadata <- metadata %>%
+  dplyr::mutate(title_status = dplyr::case_when(
+    stringr::str_detect(refinebio_title, "PM-\\d+") ~ "PM",
+    TRUE ~ "other"
+  ))
+
+assignment1_groups <- metadata$title_status
+
+
+# initializes a matrix to store the p-values
+num_clusters <- length(cluster_df)
+p_values <- matrix(nrow=num_clusters, ncol=2, dimnames=list(names(cluster_df), c("Unadjusted", "Adjusted")))
+
+
+# this is needed because the lengths have to match
+subset_assignment1_groups <- assignment1_groups[1:1000]
+cluster_df <- cluster_df[1:1000, ]
+
+# performs the chi-squared test for each clustering result
+for (i in 1:num_clusters) {
+  # makes sure it is the same length
+  if (length(cluster_df[[i]]) != length(subset_assignment1_groups)) {
+    stop(paste0("Length mismatch for cluster ", i, "."))
+  }
+  
+  
+  # creates table for chi-squared test
+  table_data <- table(cluster_df[[i]], subset_assignment1_groups)
+  
+  (table_data)
+  # actual chi-squared test
+  chi_sq_test <- chisq.test(table_data)
+  print(chi_sq_test)
+  
+  
+  # stores the unadjusted p-value
+  p_values[i, "Unadjusted"] <- chi_sq_test$p.value
+}
+
+
+# adjusts the p-values for multiple hypothesis testing
+p_values[, "Adjusted"] <- p.adjust(p_values[, "Unadjusted"], method = "BH")
+
+
+# converts to data frame for visualization
+p_values_df <- as.data.frame(p_values)
+
+
+# displays the table of p-values
+print(p_values_df)
+
+
 # ----------------------------------------------------------------------------
 
 # HIERARCHICAL CLUSTERING
