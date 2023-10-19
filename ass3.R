@@ -210,70 +210,68 @@ if (!require("BiocManager", quietly = TRUE))
 BiocManager::install("ConsensusClusterPlus")
 
 data_to_cluster <- gene_expression[most_var_5000[,1], ]
-data_matrix <- as.matrix(data_to_cluster)
-
-
+data_matrix = as.dist(1 - cor(t(data_to_cluster), method="pearson"))
 #results for top 5000
 library(ConsensusClusterPlus)
 results_5000 <- ConsensusClusterPlus(data_matrix,
-                                maxK=4, 
-                                reps=1500, 
+                                maxK=3, 
+                                reps=50, 
                                 pItem=0.8, 
                                 pFeature=1, 
                                 clusterAlg="hc", 
                                 distance="pearson",
-                                seed=1262118388.71279)
+                                seed=12345)
 
 
 #results for top 10
 data_top_10 <- gene_expression[most_var_5000[1:10, 1], ]
-matrix_top_10 <- as.matrix(data_top_10)
+matrix_top_10 = as.dist(1 - cor(t(data_top_10), method="pearson"))
 results_10 <- ConsensusClusterPlus(matrix_top_10,
-                                     maxK=4, 
-                                     reps=1500, 
-                                     pItem=0.8, 
-                                     pFeature=1, 
-                                     clusterAlg="hc", 
+                                     maxK=3,
+                                     reps=50,
+                                     pItem=0.8,
+                                     pFeature=1,
+                                     clusterAlg="hc",
                                      distance="pearson",
-                                     seed=1262118388.71279)
+                                     seed=12345)
 
 #results for top 100
 data_top_100 <- gene_expression[most_var_5000[1:100, 1], ]
-matrix_top_100 <- as.matrix(data_top_100)
+matrix_top_100 = as.dist(1 - cor(t(data_top_100), method="pearson"))
 results_100 <- ConsensusClusterPlus(matrix_top_100,
-                                   maxK=4, 
-                                   reps=1500, 
+                                   maxK=3, 
+                                   reps=50, 
                                    pItem=0.8, 
                                    pFeature=1, 
                                    clusterAlg="hc", 
                                    distance="pearson",
-                                   seed=1262118388.71279)
+                                   seed=12345)
 
 #results for top 1000
 data_top_1000 <- gene_expression[most_var_5000[1:1000, 1], ]
-matrix_top_1000 <- as.matrix(data_top_1000)
+matrix_top_1000 = as.dist(1 - cor(t(data_top_1000), method="pearson"))
 results_1000 <- ConsensusClusterPlus(matrix_top_1000,
-                                    maxK=4, 
-                                    reps=1500, 
+                                    maxK=3, 
+                                    reps=50, 
                                     pItem=0.8, 
                                     pFeature=1, 
                                     clusterAlg="hc", 
                                     distance="pearson",
-                                    seed=1262118388.71279)
+                                    seed=12345)
 
 
 #results for top 10000
 most_var_10000 <- sorted_gene_vars_no_na[1:10000, ]
 data_top_10000 <- gene_expression[most_var_10000[1:10000, 1], ]
-matrix_top_10000 <- as.matrix(data_top_10000)
+matrix_top_10000 = as.dist(1 - cor(t(data_top_10000), method="pearson"))
 results_10000 <- ConsensusClusterPlus(matrix_top_10000,
-                                     maxK=4, 
-                                     reps=1500, 
-                                     pItem=0.8, 
+                                     maxK=3, 
+                                     reps=1, 
+                                     pItem=0.5, 
                                      pFeature=1, 
                                      clusterAlg="hc", 
                                      distance="pearson",
-                                     seed=1262118388.71279)
+                                     seed=12345)
 
 
 #alluvial plot
@@ -287,31 +285,39 @@ if (!require("reshape2", quietly = TRUE))
 library(ggalluvial)
 library(reshape2)
 
-cluster_assignments_10 <- results_10[[4]]$consensusClass
-cluster_assignments_100 <- results_100[[4]]$consensusClass
-cluster_assignments_1000 <- results_1000[[4]]$consensusClass
-cluster_assignments_5000 <- results_5000[[4]]$consensusClass
-cluster_assignments_10000 <- results_10000[[4]]$consensusClass
-head(cluster_assignments_10)
-all_clusters <- data.frame(sample_id = names(cluster_assignments_10000), 
-                           most_var_10 = cluster_assignments_10,
-                           most_var_100 = cluster_assignments_100,
-                           most_var_1000 = cluster_assignments_1000,
-                           most_var_5000 = cluster_assignments_5000,
-                           most_var_10000 = cluster_assignments_10000
+
+cluster_assignments_10 <- results_10[[3]]$consensusClass ##SHOWS SAMPLES IN CLUSTERING
+cluster_assignments_100 <- results_100[[3]]$consensusClass
+cluster_assignments_1000 <- results_1000[[3]]$consensusClass
+cluster_assignments_5000 <- results_5000[[3]]$consensusClass
+cluster_assignments_10000 <- results_10000[[3]]$consensusClass
+
+
+data <- data.frame(
+  id = 1:length(cluster_assignments_10),
+  assignment_10 = cluster_assignments_10,
+  assignment_100 = cluster_assignments_100,
+  assignment_1000 = cluster_assignments_1000,
+  assignment_5000 = cluster_assignments_5000,
+  assignment_10000 = cluster_assignments_10000
 )
-colnames(all_clusters)
-head(all_clusters)
-melted_data <- melt(all_clusters, id.vars = "sample_id", variable.name = "variation", value.name = "cluster")
-colnames(melted_data)
+
+# 2. Plot with ggalluvial
+library(ggplot2)
 library(ggalluvial)
-ccp_alluvial <- ggplot(data = melted_data,
-       aes(axis1 = sample_id, axis2 = variation, y = cluster)) +
-  geom_alluvium(aes(fill = cluster)) +
+
+ccp_alluvial <- ggplot(data = data, 
+       aes(axis1 = assignment_10, axis2 = assignment_100, axis3 = assignment_1000, axis4 = assignment_5000, axis5 = assignment_10000)) +
+  geom_alluvium(aes(fill = assignment_5000), width = 1/12) +
   geom_stratum() +
   geom_text(stat = "stratum", aes(label = after_stat(stratum))) +
-  theme_minimal()
+  theme_minimal() +
+  labs(title = "Changes in cluster membership from 10 to 10,000",
+       x = "Number of genes used in clustering",
+       y = "gene count",
+       fill = "Cluster")
 
+print(ccp_alluvial)
 
 ggsave(filename = "~/BioinformaticsProject/plots/ccp_alluvial.png", plot = ccp_alluvial, width = 10, height = 8, dpi = 400)
 
@@ -385,11 +391,24 @@ if (!requireNamespace("dendextend", quietly = TRUE)) {
 
 library(pheatmap)
 library(dendextend)
+<<<<<<< HEAD
+
+# Create a heatmap
+data_to_cluster <- gene_expression[most_var_5000[,1], ]
+heatmap_data <- data_to_cluster
+=======
+>>>>>>> 41e0c5382b3cc4e9dfeaabc838d60a2a26fc1c44
 
 # Create a heatmap
 data_to_cluster <- gene_expression[most_var_5000[,1], ]
 heatmap_data <- data_to_cluster
 
+<<<<<<< HEAD
+# different types, just label yours...
+
+
+=======
+>>>>>>> 41e0c5382b3cc4e9dfeaabc838d60a2a26fc1c44
 # Create row and column dendrograms
 row_dend <- as.dendrogram(hclust(dist(heatmap_data)))
 col_dend <- as.dendrogram(hclust(dist(t(heatmap_data))))
@@ -412,3 +431,14 @@ pheatmap(
   main = "Heatmap of 5,000 Genes",
   filename = "heatmap6.png"  # You can specify the file name and format
 )
+<<<<<<< HEAD
+# ----------------------------------------------------------------------------
+
+# Statistics 
+
+# Chi-squared
+
+# CCP
+
+=======
+>>>>>>> 41e0c5382b3cc4e9dfeaabc838d60a2a26fc1c44
