@@ -1,0 +1,1444 @@
+---
+title: "GeneSequencing"
+author: Matheus, Rama, Ethan, Nathan
+output: html_document
+date: "2023-10-22"
+--- 
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Ensembl to Hugo Conversion Script
+
+This script changes gene names from the "Ensembl" format to the "Hugo" format. 
+Think of it like translating words from one language to another, but for genes.
+
+## Instructions for Use
+
+1. Set the working directory to where your data files are located.
+2. If your data files have different names, update the `data_file` and `metadata_file` variables.
+3. If you want the results to be saved in a different directory, update the `results_dir` variable.
+
+```{r filepath, include=FALSE}
+working_directory <- "C:/Users/Matheus/OneDrive/University of Florida/JUNIOR FALL/CGS4144/combined-project"
+data_dir <- file.path("data", "SRP094496")
+data_file <- file.path(data_dir, "SRP094496.tsv")
+metadata_file <- file.path(data_dir, "metadata_SRP094496.tsv")
+results_dir <- "results"
+plots_dir <- "plots"
+annotation_db_name <- "org.Mm.eg.db"
+```
+
+## Downloads the necessary packages
+
+```{r libraries, include=FALSE}
+setwd(working_directory)
+
+# installs and loads required packages
+required_packages <- c("readr", "AnnotationDbi", "BiocManager", "sessioninfo", "magrittr", "tidyverse", "umap", "cowplot", "ggplot2", "devtools", "gprofiler2", "clusterProfiler", "ggalluvial", "topGO", "cluster", "matrixStats")
+new_packages <- required_packages[!(required_packages %in% installed.packages()[,"Package"])]
+if(length(new_packages)) install.packages(new_packages)
+library(sessioninfo)
+library(readr)
+library(magrittr)
+library(tidyverse)
+library(cowplot)
+library(umap)
+library(ggplot2)
+library(devtools)
+library(ggalluvial)
+library(topGO)
+library(clusterProfiler)
+library(cluster)
+library(matrixStats)
+
+if (!("DESeq2" %in% installed.packages())) {
+  BiocManager::install("DESeq2", update = FALSE)
+}
+if (!("EnhancedVolcano" %in% installed.packages())) {
+  BiocManager::install("EnhancedVolcano", update = FALSE)
+}
+if (!("apeglm" %in% installed.packages())) {
+  BiocManager::install("apeglm", update = FALSE)
+}
+if (!("topGO" %in% installed.packages())) {
+  BiocManager::install("topGO", update = FALSE)
+}
+
+
+# installs House Mouse Annotation Package if not already installed
+if (!(annotation_db_name %in% installed.packages())) {
+  BiocManager::install(annotation_db_name, update = FALSE)
+}
+
+install_github("jokergoo/ComplexHeatmap", force = TRUE)
+library(ComplexHeatmap)
+
+
+library(org.Mm.eg.db)
+
+
+
+# sets random seed
+set.seed(50341)
+
+```
+
+## Converts Ensembl to Hugo (Symbol) Gene IDs
+
+```{r ensembl to hugo}
+# imports and sets up data
+metadata <- readr::read_tsv(metadata_file)
+expression_df <- readr::read_tsv(data_file) %>%
+  tibble::column_to_rownames("Gene")
+expression_df <- expression_df %>% dplyr::select(metadata$refinebio_accession_code)
+expression_df <- expression_df %>%
+  tibble::rownames_to_column("Gene")
+
+# maps ENSEMBL to SYMBOL (Hugo)
+mapped_list <- mapIds(
+  org.Mm.eg.db,
+  keys = expression_df$Gene,
+  keytype = "ENSEMBL",
+  column = "SYMBOL",
+  multiVals = "list")
+
+# turns list into dataframe
+mapped_df <- mapped_list %>%
+  tibble::enframe(name = "Ensembl", value = "Hugo") %>%
+  tidyr::unnest(cols = Hugo)
+
+# counts occurrences of each Ensembl ID
+multi_mapped <- mapped_df %>%
+  dplyr::count(Ensembl, name = "hugo_id_count") %>%
+  dplyr::arrange(desc(hugo_id_count))
+
+# collapses multiple Hugo IDs into a single column
+collapsed_mapped_df <- mapped_df %>%
+  dplyr::group_by(Ensembl) %>%
+  dplyr::summarize(all_hugo_ids = paste(Hugo, collapse = ";"))
+
+# maps only the first instance of each Ensembl ID
+final_mapped_df <- data.frame(
+  "first_mapped_hugo_id" = mapIds(
+    org.Mm.eg.db, 
+    keys = expression_df$Gene,
+    keytype = "ENSEMBL",
+    column = "SYMBOL",
+    multiVals = "first"
+  )
+) %>%
+  tibble::rownames_to_column("Ensembl") %>%
+  dplyr::inner_join(collapsed_mapped_df, by = "Ensembl") %>%
+  dplyr::inner_join(expression_df, by = c("Ensembl" = "Gene"))
+
+# writes results to file
+readr::write_tsv(final_mapped_df, file.path(results_dir, "mapped_df.tsv"))
+
+# prints session info
+#sessioninfo::session_info()
+
+```
+
+
+
+## {PART 2}
+
+Density plot
+
+```{r density plot}
+
+# loads the results file after running previous code section
+mapped_file <- file.path(results_dir, "mapped_df.tsv")
+mapped <- readr::read_tsv(mapped_file)
+
+# processes the data data
+drop <- c("Ensembl","all_hugo_ids")
+df_numerical <- mapped[,!(names(mapped) %in% drop)]
+df_non_na <- na.omit(df_numerical)
+df_averaged <- df_non_na %>%
+  group_by(first_mapped_hugo_id) %>%
+  summarise(across(where(is.numeric), ~mean(.x, na.rm = TRUE)), .groups = 'drop')
+expression_df <- df_averaged %>%
+  tibble::column_to_rownames("first_mapped_hugo_id")
+
+# displays number of genes and samples
+cat('It includes', dim(expression_df)[1], 'genes and', dim(expression_df)[2], 'samples.')
+
+# log scale the data
+log_scaled_mapped <- log(expression_df[-1] + 1)
+median_ranges <- apply(log_scaled_mapped, 1, function(row) {range(row)[2] - range(row)[1]})
+
+# creates and saves density plot
+density_plot <- ggplot(data.frame(median_ranges), aes(x = median_ranges)) + 
+  geom_density(fill = 'blue') + 
+  labs(title = 'Density Plot of Per-Gene Median Expression Ranges', 
+       x = 'Median Expression Range', y = 'Density') +
+  theme_minimal(base_size = 15)
+ggsave(filename = file.path(plots_dir, "density_plot.png"), 
+       plot = density_plot, 
+       width = 7, 
+       height = 7, 
+       bg = "white")
+
+```
+
+Principal Component Analysis
+
+```{r pca}
+
+# divides into two classes. PM vs Others
+metadata <- metadata %>%
+  dplyr::mutate(title_status = dplyr::case_when(
+    stringr::str_detect(refinebio_title, "PM-\\d+") ~ "PM",
+    TRUE ~ "other"
+  ))
+metadata <- metadata %>%
+  dplyr::mutate(
+    title_status = factor(title_status, levels = c("PM", "other"))
+  )
+
+# subsets expression data
+expression_df <- expression_df %>%
+  dplyr::select(metadata$refinebio_accession_code)
+
+# rounds expression data
+rounded_expression_df <- round(expression_df)
+
+# creates DESeq2 dataset and perform PCA
+dds <- DESeqDataSetFromMatrix(
+  countData = rounded_expression_df,
+  colData = metadata,
+  design = ~title_status
+)
+dds <- DESeq(dds)
+vst_data <- vst(dds)
+pca_data <- plotPCA(vst_data, intgroup = "title_status", returnData = TRUE)
+pca_object <- DESeq2::plotPCA(vst_data, intgroup = "title_status", returnData = TRUE)
+percentVar <- round(100 * attr(pca_object, "percentVar"))
+
+# creates and save PCA plot
+pca_plot <- ggplot(pca_data, aes(x = PC1, y = PC2, color = title_status)) +
+  geom_point(size = 0.5, alpha = 0.8) +
+  theme_minimal(base_size = 15) +
+  ggtitle("PCA Plot") +
+  labs(x = paste0("PC1: ", percentVar[1], "% variance"), 
+       y = paste0("PC2: ", percentVar[2], "% variance"), 
+       color = "Title Status") +
+  theme(legend.position = "bottom") +
+  scale_color_manual(values = c("red", "blue"))
+ggsave(filename = file.path(plots_dir, "pca_plot.png"), plot = pca_plot, width = 7, height = 7, bg = "white")
+
+```
+
+Uniform Manifold Approximation and Projection
+
+```{r umap}
+
+# performs UMAP and creates plot
+data_matrix <- assay(vst_data)
+umap_results <- umap(t(data_matrix))
+umap_df <- data.frame(UMAP1 = umap_results$layout[,1], 
+                      UMAP2 = umap_results$layout[,2],
+                      title_status = metadata$title_status)
+umap_plot <- ggplot(umap_df, aes(x = UMAP1, y = UMAP2, color = title_status)) + 
+  geom_point(size = 0.5, alpha = 0.8) + 
+  theme_minimal(base_size = 15) +
+  ggtitle("UMAP Plot") +
+  labs(color = "Labels") +
+  theme(legend.position = "bottom") +
+  scale_color_manual(values = c("red", "blue"))
+ggsave(filename = file.path(plots_dir, "umap_plot.png"),
+       plot = umap_plot,
+       width = 7,
+       height = 7,
+       bg = "white")
+
+```
+
+Differential analysis
+
+```{r differential analysis}
+
+# filters data and perform differential analysis
+filtered_expression_df <- expression_df %>%
+  dplyr::filter(rowSums(.) >= 10)
+gene_matrix <- round(filtered_expression_df)
+
+ddset <- DESeqDataSetFromMatrix(
+  countData = gene_matrix,
+  colData = metadata,
+  design = ~title_status
+)
+deseq_object <- DESeq(ddset)
+deseq_results <- results(deseq_object)
+deseq_results <- lfcShrink(
+  deseq_object,
+  coef = 2,
+  res = deseq_results
+)
+deseq_df <- deseq_results %>%
+  as.data.frame() %>%
+  tibble::rownames_to_column("Hugo") %>%
+  dplyr::mutate(threshold = padj < 0.05) %>%
+  dplyr::arrange(dplyr::desc(log2FoldChange))
+
+readr::write_tsv(
+  deseq_df,
+  file.path(
+    results_dir,
+    "diff_expr_results.tsv"
+  )
+)
+
+```
+
+Creates and saves Volcano plot
+
+```{r volcano plot}
+
+volcano_plot <- EnhancedVolcano::EnhancedVolcano(
+  deseq_df,
+  lab = deseq_df$Hugo,
+  x = "log2FoldChange",
+  y = "padj",
+  pCutoff = 0.01
+)
+
+ggsave(
+  plot = volcano_plot,
+  file.path(plots_dir, "volcano_plot.png")
+)
+
+```
+
+Creates and saves Heatmap
+Deseq stands for Differential Expression analysis of Sequencing data!
+
+```{r heatmap}
+
+# loads differential analysis data
+deseq_file <- file.path(results_dir, "diff_expr_results.tsv")
+deseq_df <- readr::read_tsv(deseq_file)
+
+deseq_df
+
+# finds significant genes
+significant_df <- subset(deseq_df, (threshold == T))
+significant_df <- subset(significant_df, ((significant_df$baseMean >= 7) & abs(significant_df$log2FoldChange) >= 1))
+
+# calculates z-scores and creates heatmap
+mat <- counts(dds)[significant_df$Hugo,]
+mat.z <- t(apply(mat, 1, scale))
+colnames(mat.z) <- rownames(metadata)
+
+heatmap_plot <- Heatmap(mat.z, cluster_rows = T, cluster_columns = T, column_labels = colnames(mat.z),
+                   row_labels = significant_df$Hugo, name = "Z-score")
+
+
+# specify the filename
+output_file <- file.path(plots_dir, "heatmap_plot.png")
+
+# open a new PNG graphics device
+png(filename = output_file, width = 800, height = 800)
+draw(heatmap_plot)
+dev.off()
+
+
+```
+
+
+
+Gets statistically significant genes
+
+```{r p values}
+
+# named vector of p-values
+all_genes <- setNames(deseq_df$pvalue, deseq_df$Hugo)
+
+# statistically significant genes
+geneSelectionFunc <- function(pvalues) {
+  return(pvalues < 0.01)
+}
+selected_genes <- sum(geneSelectionFunc(all_genes))
+print(selected_genes)
+
+```
+
+topGO Analysis with BP (Biological Process) Ontology
+
+```{r topGO BP}
+
+# picks a random gene from your list
+keytypes(org.Mm.eg.db)
+head(names(all_genes))
+
+valid_keys <- keys(org.Mm.eg.db, keytype = "SYMBOL")
+head(intersect(valid_keys, names(all_genes)))
+length(valid_keys)
+
+invalid_keys <- setdiff(names(all_genes), valid_keys)
+head(invalid_keys)
+length(invalid_keys)
+
+all_genes_valid <- all_genes[names(all_genes) %in% valid_keys]
+
+# creates topGOdata Object:
+GOdata <- new("topGOdata",
+              description = "My GO Analysis",
+              ontology = "BP", 
+              allGenes = all_genes, 
+              geneSel = geneSelectionFunc, 
+              nodeSize = 10, 
+              annot = annFUN.org,
+              mapping = "org.Mm.eg.db",
+              ID = "SYMBOL")
+
+GOdata
+
+resultFisher <- runTest(GOdata, algorithm = "classic", statistic = "fisher")
+resultKS <- runTest(GOdata, algorithm = "classic", statistic = "ks")
+resultKS.elim <- runTest(GOdata, algorithm = "elim", statistic = "ks")
+
+tableKS <- GenTable(GOdata, 
+                    classicKS = resultKS, 
+                    topNodes = 10, 
+                    orderBy = "classicKS", 
+                    ranksOf = "classicKS")
+
+tableKSelim <- GenTable(GOdata, 
+                        elimKS = resultKS.elim, 
+                        topNodes = 10, 
+                        orderBy = "elimKS", 
+                        ranksOf = "elimKS")
+
+tableFisher <- GenTable(GOdata, 
+                        classicFisher = resultFisher, 
+                        topNodes = 15, 
+                        orderBy = "classicFisher", 
+                        ranksOf = "classicFisher")
+
+readr::write_tsv(
+  tableFisher,
+  file.path(plots_dir, "topGO_table.tsv")
+)
+
+allRes <- GenTable(GOdata, classicFisher = resultFisher,
+                   classicKS = resultKS, elimKS = resultKS.elim,
+                   orderBy = "elimKS", ranksOf = "classicFisher", topNodes = 10)
+
+readr::write_tsv(
+  allRes,
+  file.path(plots_dir, "allRes_table.tsv")
+)
+
+```
+
+
+clusterProfiler Analysis with BP Ontology
+
+```{r clusterProfiler}
+
+deseq_data <- deseq_df
+
+# converts gene symbols to Entrez Gene IDs for the clusterProfiler
+entrez_ids <- mapIds(org.Mm.eg.db, keys = deseq_data$Hugo, column = "ENTREZID", keytype = "SYMBOL")
+deseq_data$Hugo <- entrez_ids
+colnames(deseq_data)[colnames(deseq_data) == "Hugo"] <- "ENTREZID"
+
+all_genes_entrez <- setNames(deseq_data$pvalue, deseq_data$ENTREZID)
+sorted_all_genes <- all_genes_entrez[order(all_genes_entrez, decreasing = TRUE)]
+
+ego3 <- gseGO(geneList     = sorted_all_genes,
+              OrgDb        = org.Mm.eg.db,
+              ont          = "BP",
+              minGSSize    = 100,
+              maxGSSize    = 150,
+              pvalueCutoff = 0.01,
+              verbose      = FALSE)
+
+goplot(ego3, max.overlaps = 50)
+
+ggsave(
+  plot = last_plot(), width = 20, height = 20, bg = "white",
+  file.path(plots_dir, "clusterProfiler_plot.png")
+)
+
+str(ego3)
+
+enriched_terms <- ego3$Description
+p_values <- ego3$`pvalue`
+q_values <- ego3$`qvalue`
+enrichment_score <- ego3$enrichmentScore
+
+enrichment_table <- data.frame(
+  Term = enriched_terms,
+  P_Value = p_values,
+  Q_Value = q_values,
+  Enrichment_Score = enrichment_score
+)
+
+significantly_enriched_terms <- enrichment_table[enrichment_table$P_Value < 0.01, ]
+
+readr::write_tsv(significantly_enriched_terms, file.path(plots_dir, "clusterProfiler_table.tsv"))
+
+```
+
+gProfiler2 Analysis with BP Ontology
+
+```{r gProfiler2}
+
+selected_gene_symbols <- names(all_genes)[geneSelectionFunc(all_genes)]
+
+# enrichment analysis with gprofiler2
+gprofiler2_enrichment_results <- gprofiler2::gost(
+  query = selected_gene_symbols,
+  organism = "mmusculus",
+  sources = c("GO:BP"),
+  correction_method = "fdr"
+)
+
+# adjusts p-values with Benjamini-Hochberg method
+gprofiler2_enrichment_results$result$p_adjusted <- p.adjust(gprofiler2_enrichment_results$result$p_value, method = "BH")
+
+# filters significant terms adjusted p-value < 0.01
+significant_terms <- gprofiler2_enrichment_results$result[gprofiler2_enrichment_results$result$`p_adjusted` < 0.01, ]
+
+# sets columns of interest
+table_cols <- c("term_name", "term_size", "intersection_size", "p_value", "p_adjusted", "effective_domain_size")
+
+# sorts significant terms and selects top 20
+sorted_table <- significant_terms[order(significant_terms$p_adjusted), ]
+top_20 <- sorted_table[1:20, ]
+significant_table <- top_20[, table_cols, drop = FALSE]
+
+readr::write_tsv(significant_table, file.path(plots_dir, "gProfiler2_table.tsv"))
+
+```
+
+topGO Analysis with MF (Molecular Function) Ontology 
+
+```{r topGO MF}
+
+mfGOdata <- new("topGOdata",
+                description = "My MF GO Analysis",
+                ontology = "MF", 
+                allGenes = all_genes, 
+                geneSel = geneSelectionFunc, 
+                nodeSize = 10, 
+                annot = annFUN.org,
+                mapping = "org.Mm.eg.db",
+                ID = "SYMBOL")
+
+
+mfGOdata
+
+resultFisher <- runTest(mfGOdata, algorithm = "classic", statistic = "fisher")
+resultKS <- runTest(mfGOdata, algorithm = "classic", statistic = "ks")
+resultKS.elim <- runTest(mfGOdata, algorithm = "elim", statistic = "ks")
+
+tableKS <- GenTable(mfGOdata, 
+                    classicKS = resultKS, 
+                    topNodes = 10, 
+                    orderBy = "classicKS", 
+                    ranksOf = "classicKS")
+print(tableKS)
+
+tableKSelim <- GenTable(mfGOdata, 
+                        elimKS = resultKS.elim, 
+                        topNodes = 10, 
+                        orderBy = "elimKS", 
+                        ranksOf = "elimKS")
+print(tableKSelim)
+
+tableFisher <- GenTable(mfGOdata, 
+                        classicFisher = resultFisher, 
+                        topNodes = 15, 
+                        orderBy = "classicFisher", 
+                        ranksOf = "classicFisher")
+print(tableFisher)
+
+readr::write_tsv(
+  tableFisher,
+  file.path(plots_dir, "MFtopGO_table.tsv")
+)
+
+allRes <- GenTable(mfGOdata, classicFisher = resultFisher,
+                   classicKS = resultKS, elimKS = resultKS.elim,
+                   orderBy = "elimKS", ranksOf = "classicFisher", topNodes = 10)
+
+readr::write_tsv(
+  allRes,
+  file.path(plots_dir, "MFallRes_table.tsv")
+)
+
+print(allRes)
+
+```
+
+
+[Part 3] 
+
+
+```{r gene variability}
+
+gene_expression <- mapped
+gene_values <- c(10, 100, 1000, 5000, 10000)
+
+
+# store gene IDs in vars and drop them from main df
+# this is so rowVars works (doesn't work with columsn of val <char>)
+symbol <- gene_expression$first_mapped_hugo_id
+Ensembl <- expression_df$Ensembl
+gene_expression$first_mapped_hugo_id <- NULL
+gene_expression$all_hugo_ids <- NULL
+gene_expression$Ensembl <- NULL
+
+# calculate variances for each gene
+gene_variability <- rowVars(as.matrix(gene_expression))
+
+# bind the variances and gene IDs
+unsorted_gene_vars <- cbind(1:length(symbol), symbol, gene_variability)
+unsorted_gene_vars
+sorted_gene_vars <- unsorted_gene_vars[order(as.numeric(unsorted_gene_vars[, 3]), decreasing=TRUE), ] 
+sorted_gene_vars
+
+# drop NA vals
+sorted_gene_vars_no_na <- sorted_gene_vars[complete.cases(sorted_gene_vars), ]
+sorted_gene_vars_no_na
+
+# grabs first x number of genes
+most_var_10 <- sorted_gene_vars_no_na[1:10, ]
+most_var_100 <- sorted_gene_vars_no_na[1:100, ]
+most_var_1000 <- sorted_gene_vars_no_na[1:1000, ]
+most_var_5000 <- sorted_gene_vars_no_na[1:5000, ]
+most_var_10000 <- sorted_gene_vars_no_na[1:10000, ]
+
+# assumes base case uses 5000 genes
+data_to_cluster <- gene_expression[most_var_5000[,1], ]
+
+```
+
+K means
+
+```{r kmeans}
+
+# sets to 3 clusters
+k <- 3
+kmeans_result <- kmeans(data_to_cluster, centers = k)
+kmeans_result
+
+# cluster assignments for each sample
+kmeans_cluster_assignments <- kmeans_result$cluster
+
+# converts to data frame for easier CSV writing
+table_df <- as.data.frame(table(kmeans_cluster_assignments))
+
+# writes to CSV
+readr::write_csv(
+  table_df,
+  file.path(plots_dir, "means_cluster_table.csv")
+)
+
+cluster_results <- cbind(1:5000, kmeans_cluster_assignments)
+
+# sets different k values
+k_values <- c(2, 3, 4, 5, 6)
+
+kmeans_results <- list()
+
+# runs K-means for each k and store the results
+for (k in k_values) {
+  set.seed(123) # sets seed for reproducibility
+  kmeans_results[[paste("k", k, sep = "_")]] <- kmeans(data_to_cluster, centers = k)
+}
+
+# calculates silhouette widths for each k
+sil_widths <- sapply(kmeans_results, function(km) {
+  silhouette_scores <- silhouette(km$cluster, dist(data_to_cluster))
+  mean(silhouette_scores[, 3]) # average silhouette width
+})
+
+# !! command is breaking, find better way to save to directory
+# plots average silhouette width for each k
+png("/plots/k_means_silhouette.png")
+
+plot(k_values, sil_widths, type = "b", pch = 19, frame = FALSE, 
+     xlab = "Number of clusters 'k'", ylab = "Average silhouette width",
+     main = "Silhouette Analysis of k-means clustering")
+
+dev.off()
+
+#Test different number of genes
+k <- 5
+gene_values <- c(10, 100, 1000)
+kmeans_genes_results <- list()
+for (g in gene_values) {
+  set.seed(123) # Set seed for reproducibility
+  kmeans_genes_results[[paste(g, "genes", sep = "_")]] <- kmeans(data_to_cluster[1:g, ], centers = k)
+}
+set.seed(123) # Set seed for reproducibility
+kmeans_genes_results[[paste("10000", "genes", sep = "_")]] <- kmeans(data_to_cluster_10000, centers = k)
+
+cluster_data <- lapply(kmeans_genes_results, function(x) x$cluster)
+names(cluster_data) <- c("kmeans_10", "kmeans_100", "kmeans_1000", "kmeans_10000")  # renaming for clarity
+cluster_df <- as.data.frame(cluster_data)
+
+library(tidyr)
+
+# Reshaping data for plotting
+cluster_df_long <- cluster_df %>% 
+  pivot_longer(cols = starts_with("kmeans"),
+               names_to = "gene_count",
+               values_to = "cluster")
+
+# Converting cluster to factor
+cluster_df$kmeans_10 <- as.factor(cluster_df$kmeans_10)
+cluster_df$kmeans_100 <- as.factor(cluster_df$kmeans_100)
+cluster_df$kmeans_1000 <- as.factor(cluster_df$kmeans_1000)
+cluster_df$kmeans_10000 <- as.factor(cluster_df$kmeans_10000)
+
+kmeans_alluvial <- ggplot(data = cluster_df,
+                          aes(axis1 = kmeans_10, axis2 = kmeans_100, 
+                              axis3 = kmeans_1000, axis4 = kmeans_10000)) +
+  geom_alluvium(aes(fill = kmeans_10000), width = 1/12) +  # Fill based on final clustering, adjust width as needed
+  geom_stratum(width = 1/12) + 
+  geom_text(stat = "stratum", aes(label = after_stat(stratum)), min.segment.length = 0) +
+  theme_minimal() +
+  labs(title = "Changes in K-means Cluster Membership Across Different Gene Counts",
+       x = "Number of Genes Used in Clustering",
+       y = "Gene Count",
+       fill = "Cluster")  # To add legend title
+
+print(kmeans_alluvial)
+
+ggsave(filename = "~/BioinformaticsProject/plots/k_means_alluvial.png", plot = kmeans_alluvial, width = 10, height = 8, dpi = 400)
+
+#Chi Squared Section
+
+# basically the stuff we did in previous assignments
+data_dir <- file.path("data", "SRP094496")
+metadata_file <- file.path(data_dir, "metadata_SRP094496.tsv")
+metadata <- readr::read_tsv(metadata_file)
+
+
+metadata <- metadata %>%
+  dplyr::mutate(title_status = dplyr::case_when(
+    stringr::str_detect(refinebio_title, "PM-\\d+") ~ "PM",
+    TRUE ~ "other"
+  ))
+
+assignment1_groups <- metadata$title_status
+
+
+# initializes a matrix to store the p-values
+num_clusters <- length(cluster_df)
+p_values <- matrix(nrow=num_clusters, ncol=2, dimnames=list(names(cluster_df), c("Unadjusted", "Adjusted")))
+
+
+# this is needed because the lengths have to match
+subset_assignment1_groups <- assignment1_groups[1:1000]
+cluster_df <- cluster_df[1:1000, ]
+
+# performs the chi-squared test for each clustering result
+for (i in 1:num_clusters) {
+  # makes sure it is the same length
+  if (length(cluster_df[[i]]) != length(subset_assignment1_groups)) {
+    stop(paste0("Length mismatch for cluster ", i, "."))
+  }
+  
+  
+  # creates table for chi-squared test
+  table_data <- table(cluster_df[[i]], subset_assignment1_groups)
+  
+  (table_data)
+  # actual chi-squared test
+  chi_sq_test <- chisq.test(table_data)
+  print(chi_sq_test)
+  
+  
+  # stores the unadjusted p-value
+  p_values[i, "Unadjusted"] <- chi_sq_test$p.value
+}
+
+
+# adjusts the p-values for multiple hypothesis testing
+p_values[, "Adjusted"] <- p.adjust(p_values[, "Unadjusted"], method = "BH")
+
+
+# converts to data frame for visualization
+p_values_df <- as.data.frame(p_values)
+
+
+# displays the table of p-values
+print(p_values_df)
+
+```
+
+
+```{r chi squared}
+
+# gets class division PM vs Others
+metadata <- readr::read_tsv(metadata_file)
+metadata <- metadata %>% mutate(title_status = ifelse(stringr::str_detect(refinebio_title, "PM-\\d+"), "PM", "other"))
+assignment1_groups <- metadata$title_status
+
+# chi-squared tests
+num_clusters <- length(cluster_df)
+p_values <- matrix(nrow=num_clusters, ncol=2, dimnames=list(names(cluster_df), c("Unadjusted", "Adjusted")))
+subset_assignment1_groups <- assignment1_groups[1:1000]
+cluster_df <- cluster_df[1:1000, ]
+
+# runs tests with different number of clusters
+for (i in 1:num_clusters) {
+  table_data <- table(cluster_df[[i]], subset_assignment1_groups)
+  chi_sq_test <- chisq.test(table_data)
+  p_values[i, "Unadjusted"] <- chi_sq_test$p.value
+}
+
+# creates table
+p_values[, "Adjusted"] <- p.adjust(p_values[, "Unadjusted"], method = "BH")
+p_values_df <- as.data.frame(p_values)
+
+print(p_values_df)
+
+# !!could save this table as well
+
+```
+
+
+Hierarchical clustering
+
+
+```{r hierarchical-clustering}
+
+# Calculate the distance matrix
+data_to_cluster <- gene_expression[most_var_5000[,1], ]
+dist_matrix <- dist(data_to_cluster, method = "euclidean")
+
+# Perform hierarchical clustering
+hclust_result <- hclust(dist_matrix, method = "complete")
+plot(hclust_result, main = "Hierarchical Clustering Dendrogram", xlab = "Samples")
+hclust_cluster_assignments <- cutree(hclust_result, k=50)
+
+cluster_results <- cbind(1:5000, hclust_cluster_assignments)
+table(hclust_cluster_assignments)
+
+# test with 10 genes
+hc <- hclust(dist(data_to_cluster[1:10, ],method="euclidean"),method="complete")
+plot(hc, main = "Hierarchical Clustering Dendrogram", xlab = "Samples")
+hclust_10 <- cutree(hc, h=3000)
+table(hclust_10)
+cluster_results <- cbind(cluster_results, hclust_10)
+
+# test with 100 genes
+hc <- hclust(dist(data_to_cluster[1:100, ],method="euclidean"),method="complete")
+plot(hc, main = "Hierarchical Clustering Dendrogram", xlab = "Samples")
+hclust_100 <- cutree(hc, h=3000)
+table(hclust_100)
+cluster_results <- cbind(cluster_results, hclust_100)
+
+# test w 1000 genes
+hc <- hclust(dist(data_to_cluster[1:1000, ],method="euclidean"),method="complete")
+plot(hc, main = "Hierarchical Clustering Dendrogram", xlab = "Samples")
+hclust_1000 <- cutree(hc, h=3000)
+table(hclust_1000)
+cluster_results <- cbind(cluster_results, hclust_1000)
+
+# test w 10000 genes
+# hc <- hclust(dist(data_to_cluster[1:10000, ],method="euclidean"),method="complete")
+# plot(hc, main = "Hierarchical Clustering Dendrogram", xlab = "Samples")
+# hclust_10000 <- cutree(hc, h=3000)
+# table(hclust_10000)
+# cluster_results <- cbind(cluster_results, hclust_10000)
+
+library(ggplot2)
+library(ggalluvial)
+
+## sankey/alluvial plot
+cluster_results <- as.data.frame(cluster_results)
+cluster_results
+hclust_alluvial <- ggplot(data = cluster_results,
+                          aes(axis1 = hclust_10, axis2 = hclust_100, axis3=hclust_1000, axis4=hclust_cluster_assignments)) +
+  geom_alluvium(aes(fill = hclust_cluster_assignments), width = 1/12) +  # you might adjust width based on your preference
+  geom_stratum(width = 1/12) + 
+  geom_text(stat = "stratum", aes(label = after_stat(stratum))) +
+  theme_minimal() +
+  labs(title = "Changes in cluster membership across different gene counts",
+       x = "Number of genes used in clustering",
+       y = "Sample count",
+       fill = "Cluster")  # to add legend title
+
+hclust_alluvial
+
+```
+
+
+Consensus Cluster Plus
+
+
+```{r consensus cluster plus}
+
+if (!require("BiocManager", quietly = TRUE))
+  install.packages("BiocManager")
+
+BiocManager::install("ConsensusClusterPlus")
+
+data_to_cluster <- gene_expression[most_var_5000[,1], ]
+data_matrix = as.dist(1 - cor(t(data_to_cluster), method="pearson"))
+#results for top 5000
+library(ConsensusClusterPlus)
+results_5000 <- ConsensusClusterPlus(data_matrix,
+                                     maxK=3, 
+                                     reps=50, 
+                                     pItem=0.8, 
+                                     pFeature=1, 
+                                     clusterAlg="hc", 
+                                     distance="pearson",
+                                     seed=12345)
+
+
+#results for top 10
+data_top_10 <- gene_expression[most_var_5000[1:10, 1], ]
+matrix_top_10 = as.dist(1 - cor(t(data_top_10), method="pearson"))
+results_10 <- ConsensusClusterPlus(matrix_top_10,
+                                   maxK=3,
+                                   reps=50,
+                                   pItem=0.8,
+                                   pFeature=1,
+                                   clusterAlg="hc",
+                                   distance="pearson",
+                                   seed=12345)
+
+#results for top 100
+data_top_100 <- gene_expression[most_var_5000[1:100, 1], ]
+matrix_top_100 = as.dist(1 - cor(t(data_top_100), method="pearson"))
+results_100 <- ConsensusClusterPlus(matrix_top_100,
+                                    maxK=3, 
+                                    reps=50, 
+                                    pItem=0.8, 
+                                    pFeature=1, 
+                                    clusterAlg="hc", 
+                                    distance="pearson",
+                                    seed=12345)
+
+#results for top 1000
+data_top_1000 <- gene_expression[most_var_5000[1:1000, 1], ]
+matrix_top_1000 = as.dist(1 - cor(t(data_top_1000), method="pearson"))
+results_1000 <- ConsensusClusterPlus(matrix_top_1000,
+                                     maxK=3, 
+                                     reps=50, 
+                                     pItem=0.8, 
+                                     pFeature=1, 
+                                     clusterAlg="hc", 
+                                     distance="pearson",
+                                     seed=12345)
+
+
+#results for top 10000
+most_var_10000 <- sorted_gene_vars_no_na[1:10000, ]
+data_top_10000 <- gene_expression[most_var_10000[1:10000, 1], ]
+matrix_top_10000 = as.dist(1 - cor(t(data_top_10000), method="pearson"))
+results_10000 <- ConsensusClusterPlus(matrix_top_10000,
+                                      maxK=3, 
+                                      reps=1, 
+                                      pItem=0.5, 
+                                      pFeature=1, 
+                                      clusterAlg="hc", 
+                                      distance="pearson",
+                                      seed=12345)
+
+
+#alluvial plot
+if (!require("ggalluvial", quietly = TRUE))
+  install.packages("ggalluvial")
+
+if (!require("reshape2", quietly = TRUE))
+  install.packages("reshape2")
+
+
+library(ggalluvial)
+library(reshape2)
+
+
+cluster_assignments_10 <- results_10[[3]]$consensusClass ##SHOWS SAMPLES IN CLUSTERING
+cluster_assignments_100 <- results_100[[3]]$consensusClass
+cluster_assignments_1000 <- results_1000[[3]]$consensusClass
+cluster_assignments_5000 <- results_5000[[3]]$consensusClass
+cluster_assignments_10000 <- results_10000[[3]]$consensusClass
+
+
+data <- data.frame(
+  id = 1:length(cluster_assignments_10),
+  assignment_10 = cluster_assignments_10,
+  assignment_100 = cluster_assignments_100,
+  assignment_1000 = cluster_assignments_1000,
+  assignment_5000 = cluster_assignments_5000,
+  assignment_10000 = cluster_assignments_10000
+)
+
+# 2. Plot with ggalluvial
+library(ggplot2)
+library(ggalluvial)
+
+ccp_alluvial <- ggplot(data = data, 
+                       aes(axis1 = assignment_10, axis2 = assignment_100, axis3 = assignment_1000, axis4 = assignment_5000, axis5 = assignment_10000)) +
+  geom_alluvium(aes(fill = assignment_5000), width = 1/12) +
+  geom_stratum() +
+  geom_text(stat = "stratum", aes(label = after_stat(stratum))) +
+  theme_minimal() +
+  labs(title = "Changes in cluster membership from 10 to 10,000",
+       x = "Number of genes used in clustering",
+       y = "gene count",
+       fill = "Cluster")
+
+print(ccp_alluvial)
+
+ggsave(filename = "~/BioinformaticsProject/plots/ccp_alluvial.png", plot = ccp_alluvial, width = 10, height = 8, dpi = 400)
+
+
+
+```
+
+
+Gaussian Mixture Model
+
+
+```{r gmm}
+
+# basically the stuff we did in previous assignments
+data_dir <- file.path("data", "SRP094496")
+metadata_file <- file.path(data_dir, "metadata_SRP094496.tsv")
+metadata <- readr::read_tsv(metadata_file)
+
+
+metadata <- metadata %>%
+  dplyr::mutate(title_status = dplyr::case_when(
+    stringr::str_detect(refinebio_title, "PM-\\d+") ~ "PM",
+    TRUE ~ "other"
+  ))
+
+assignment1_groups <- metadata$title_status
+
+
+# initializes a matrix to store the p-values
+num_clusters <- length(cluster_df_gmm)
+p_values <- matrix(nrow=num_clusters, ncol=2, dimnames=list(names(cluster_df_gmm), c("Unadjusted", "Adjusted")))
+
+
+# this is needed because the lengths have to match
+subset_assignment1_groups <- assignment1_groups[1:1000]
+
+
+# performs the chi-squared test for each clustering result
+for (i in 1:num_clusters) {
+  # makes sure it is the same length
+  if (length(cluster_df_gmm[[i]]) != length(subset_assignment1_groups)) {
+    stop(paste0("Length mismatch for cluster ", i, "."))
+  }
+  
+  
+  # creates table for chi-squared test
+  table_data <- table(cluster_df_gmm[[i]], subset_assignment1_groups)
+  
+  
+  # actual chi-squared test
+  chi_sq_test <- chisq.test(table_data)
+  
+  
+  # stores the unadjusted p-value
+  p_values[i, "Unadjusted"] <- chi_sq_test$p.value
+}
+
+
+# adjusts the p-values for multiple hypothesis testing
+p_values[, "Adjusted"] <- p.adjust(p_values[, "Unadjusted"], method = "BH")
+
+
+# converts to data frame for visualization
+p_values_df <- as.data.frame(p_values)
+
+
+# displays the table of p-values
+print(p_values_df)
+
+
+```
+
+
+PCA (Optional)
+
+
+```{r heatmap}
+
+# Install and load necessary packages
+if (!requireNamespace("pheatmap", quietly = TRUE)) {
+  install.packages("pheatmap")
+}
+if (!requireNamespace("dendextend", quietly = TRUE)) {
+  install.packages("dendextend")
+}
+
+library(pheatmap)
+library(dendextend)
+
+# Create a heatmap
+data_to_cluster <- gene_expression[most_var_5000[,1], ]
+heatmap_data <- data_to_cluster
+
+# different types, just label yours...
+
+
+# Create row and column dendrograms
+row_dend <- as.dendrogram(hclust(dist(heatmap_data)))
+col_dend <- as.dendrogram(hclust(dist(t(heatmap_data))))
+
+# Create annotation data
+annotation_data <- data.frame(
+  hclust = hclust_cluster_assignments
+)
+colnames(heatmap_data)
+
+# Create the heatmap
+pheatmap(
+  as.matrix(heatmap_data,  rownames.force = TRUE),
+  cluster_rows=TRUE,
+  cluster_cols=TRUE,
+  show_colnames = FALSE,  # You can set this to TRUE if you want to display column names
+  legend = TRUE,
+  annotation_row = annotation_data, 
+  main = "Heatmap of 5,000 Genes",
+  filename = "heatmap6.png"  # You can specify the file name and format
+)
+
+```
+
+
+```{r stats stuff}
+
+head(results_5000)
+
+cluster_assignments <- results_5000[[3]]$consensusClass
+
+most_var_5000 <- sorted_gene_vars_no_na[1:5000, ]
+gene_names <- most_var_5000[, 2]
+head(gene_names)
+cluster_df <- data.frame(first_mapped_hugo_id = gene_names, Cluster = cluster_assignments)
+merged_df <- merge(cluster_df, expression_df, by="first_mapped_hugo_id")
+head(merged_df)
+metadata <- metadata %>%
+  dplyr::mutate(title_status = dplyr::case_when(
+    stringr::str_detect(refinebio_title, "PM-\\d+") ~ "PM",
+    TRUE ~ "other"
+  ))
+
+library(tidyr)
+
+df_averaged <- merged_df %>%
+  group_by(first_mapped_hugo_id) %>%
+  summarise(across(where(is.numeric), ~mean(.x, na.rm = TRUE)), .groups = 'drop')
+
+final_df <- df_averaged %>%
+  tibble::column_to_rownames("first_mapped_hugo_id")
+head(final_df)
+final_df$Gene <- rownames(final_df)
+
+long_final_df <- final_df %>%
+  tidyr::gather(key = "refinebio_accession_code", value = "Expression_Value", -Cluster, -Gene)
+merged_final_df <- merge(long_final_df, metadata, by = "refinebio_accession_code")
+
+contingency_table <- table(merged_final_df$Cluster, merged_final_df$title_status)
+test_result_5000 <- chisq.test(contingency_table)
+print(test_result)
+
+###
+cluster_assignments <- results_1000[[3]]$consensusClass
+
+most_var_1000 <- sorted_gene_vars_no_na[1:1000, ]
+gene_names <- most_var_1000[, 2]
+head(gene_names)
+cluster_df <- data.frame(first_mapped_hugo_id = gene_names, Cluster = cluster_assignments)
+merged_df <- merge(cluster_df, expression_df, by="first_mapped_hugo_id")
+head(merged_df)
+metadata <- metadata %>%
+  dplyr::mutate(title_status = dplyr::case_when(
+    stringr::str_detect(refinebio_title, "PM-\\d+") ~ "PM",
+    TRUE ~ "other"
+  ))
+
+library(tidyr)
+
+df_averaged <- merged_df %>%
+  group_by(first_mapped_hugo_id) %>%
+  summarise(across(where(is.numeric), ~mean(.x, na.rm = TRUE)), .groups = 'drop')
+
+final_df <- df_averaged %>%
+  tibble::column_to_rownames("first_mapped_hugo_id")
+head(final_df)
+final_df$Gene <- rownames(final_df)
+
+long_final_df <- final_df %>%
+  tidyr::gather(key = "refinebio_accession_code", value = "Expression_Value", -Cluster, -Gene)
+merged_final_df <- merge(long_final_df, metadata, by = "refinebio_accession_code")
+
+contingency_table <- table(merged_final_df$Cluster, merged_final_df$title_status)
+test_result_1000 <- chisq.test(contingency_table)
+print(test_result)
+
+###
+cluster_assignments <- results_100[[3]]$consensusClass
+
+most_var_100 <- sorted_gene_vars_no_na[1:100, ]
+gene_names <- most_var_100[, 2]
+head(gene_names)
+cluster_df <- data.frame(first_mapped_hugo_id = gene_names, Cluster = cluster_assignments)
+merged_df <- merge(cluster_df, expression_df, by="first_mapped_hugo_id")
+head(merged_df)
+metadata <- metadata %>%
+  dplyr::mutate(title_status = dplyr::case_when(
+    stringr::str_detect(refinebio_title, "PM-\\d+") ~ "PM",
+    TRUE ~ "other"
+  ))
+
+library(tidyr)
+
+df_averaged <- merged_df %>%
+  group_by(first_mapped_hugo_id) %>%
+  summarise(across(where(is.numeric), ~mean(.x, na.rm = TRUE)), .groups = 'drop')
+
+final_df <- df_averaged %>%
+  tibble::column_to_rownames("first_mapped_hugo_id")
+head(final_df)
+final_df$Gene <- rownames(final_df)
+
+long_final_df <- final_df %>%
+  tidyr::gather(key = "refinebio_accession_code", value = "Expression_Value", -Cluster, -Gene)
+merged_final_df <- merge(long_final_df, metadata, by = "refinebio_accession_code")
+
+contingency_table <- table(merged_final_df$Cluster, merged_final_df$title_status)
+test_result_100 <- chisq.test(contingency_table)
+print(test_result)
+
+###
+
+cluster_assignments <- results_10[[3]]$consensusClass
+
+most_var_10 <- sorted_gene_vars_no_na[1:10, ]
+gene_names <- most_var_10[, 2]
+head(gene_names)
+cluster_df <- data.frame(first_mapped_hugo_id = gene_names, Cluster = cluster_assignments)
+merged_df <- merge(cluster_df, expression_df, by="first_mapped_hugo_id")
+head(merged_df)
+metadata <- metadata %>%
+  dplyr::mutate(title_status = dplyr::case_when(
+    stringr::str_detect(refinebio_title, "PM-\\d+") ~ "PM",
+    TRUE ~ "other"
+  ))
+
+library(tidyr)
+
+df_averaged <- merged_df %>%
+  group_by(first_mapped_hugo_id) %>%
+  summarise(across(where(is.numeric), ~mean(.x, na.rm = TRUE)), .groups = 'drop')
+
+final_df <- df_averaged %>%
+  tibble::column_to_rownames("first_mapped_hugo_id")
+head(final_df)
+final_df$Gene <- rownames(final_df)
+
+long_final_df <- final_df %>%
+  tidyr::gather(key = "refinebio_accession_code", value = "Expression_Value", -Cluster, -Gene)
+merged_final_df <- merge(long_final_df, metadata, by = "refinebio_accession_code")
+
+contingency_table <- table(merged_final_df$Cluster, merged_final_df$title_status)
+test_result_10 <- chisq.test(contingency_table)
+print(test_result)
+
+###
+all_original_p_values <- c(test_result_10$p.value, test_result_100$p.value, 
+                           test_result_1000$p.value, test_result_5000$p.value)
+
+adjusted_p_values_bonferroni <- p.adjust(all_original_p_values, method = "bonferroni")
+adjusted_p_values_holm <- p.adjust(all_original_p_values, method = "holm")
+adjusted_p_values_BH <- p.adjust(all_original_p_values, method = "BH")
+
+results_table <- data.frame(
+  Variation = c("10", "100", "1000", "5000"),
+  Original_P_Values = all_original_p_values,
+  Bonferroni_Adjusted = adjusted_p_values_bonferroni,
+  Holm_Adjusted = adjusted_p_values_holm,
+  BH_Adjusted = adjusted_p_values_BH
+)
+
+
+```
+
+GMM Stats
+
+```{r gmm stuff}
+
+
+# this is needed for the assignment 1 groups
+
+# basically the stuff we did in previous assignments
+data_dir <- file.path("data", "SRP094496")
+metadata_file <- file.path(data_dir, "metadata_SRP094496.tsv")
+metadata <- readr::read_tsv(metadata_file)
+
+
+metadata <- metadata %>%
+  dplyr::mutate(title_status = dplyr::case_when(
+    stringr::str_detect(refinebio_title, "PM-\\d+") ~ "PM",
+    TRUE ~ "other"
+  ))
+
+assignment1_groups <- metadata$title_status
+
+
+# initializes a matrix to store the p-values
+num_clusters <- length(cluster_df_gmm)
+p_values <- matrix(nrow=num_clusters, ncol=2, dimnames=list(names(cluster_df_gmm), c("Unadjusted", "Adjusted")))
+
+
+# this is needed because the lengths have to match
+subset_assignment1_groups <- assignment1_groups[1:1000]
+
+
+# performs the chi-squared test for each clustering result
+for (i in 1:num_clusters) {
+  # makes sure it is the same length
+  if (length(cluster_df_gmm[[i]]) != length(subset_assignment1_groups)) {
+    stop(paste0("Length mismatch for cluster ", i, "."))
+  }
+  
+  
+  # creates table for chi-squared test
+  table_data <- table(cluster_df_gmm[[i]], subset_assignment1_groups)
+  
+  
+  # actual chi-squared test
+  chi_sq_test <- chisq.test(table_data)
+  
+  
+  # stores the unadjusted p-value
+  p_values[i, "Unadjusted"] <- chi_sq_test$p.value
+}
+
+
+# adjusts the p-values for multiple hypothesis testing
+p_values[, "Adjusted"] <- p.adjust(p_values[, "Unadjusted"], method = "BH")
+
+
+# converts to data frame for visualization
+p_values_df <- as.data.frame(p_values)
+
+
+# displays the table of p-values
+print(p_values_df)
+
+
+```
+
+```{r hclust}
+
+
+# For 10 genes
+dist_matrix_10 <- dist(data_to_cluster[1:10, ], method="euclidean")
+hc_10 <- hclust(dist_matrix_10, method="complete")
+hclust_10 <- cutree(hc_10, k=min(10, nrow(data_to_cluster[1:10, ])))
+
+# For 100 genes
+dist_matrix_100 <- dist(data_to_cluster[1:100, ], method="euclidean")
+hc_100 <- hclust(dist_matrix_100, method="complete")
+hclust_100 <- cutree(hc_100, k=min(10, nrow(data_to_cluster[1:100, ])))
+
+# For 1000 genes
+dist_matrix_1000 <- dist(data_to_cluster[1:1000, ], method="euclidean")
+hc_1000 <- hclust(dist_matrix_1000, method="complete")
+hclust_1000 <- cutree(hc_1000, k=min(10, nrow(data_to_cluster[1:1000, ])))
+
+# For all 5000 genes
+dist_matrix_all <- dist(data_to_cluster, method="euclidean")
+hc_all <- hclust(dist_matrix_all, method="complete")
+hclust_all <- cutree(hc_all, k=min(10, nrow(data_to_cluster)))
+
+library(ggplot2)
+
+```
+
+Hierarchical clustering results
+
+```{r hclust results}
+
+cluster_df_hclust <- list(
+  hclust_10 = hclust_10,
+  hclust_100 = hclust_100,
+  hclust_1000 = hclust_1000,
+  hclust_all = hclust_cluster_assignments
+)
+
+
+# basically the stuff we did in previous assignments
+data_dir <- file.path("data", "SRP094496")
+metadata_file <- file.path(data_dir, "metadata_SRP094496.tsv")
+metadata <- readr::read_tsv(metadata_file)
+
+
+
+# This is the same metadata processing and creation of assignment1_groups as before
+metadata <- metadata %>%
+  dplyr::mutate(title_status = dplyr::case_when(
+    stringr::str_detect(refinebio_title, "PM-\\d+") ~ "PM",
+    TRUE ~ "other"
+  ))
+
+assignment1_groups <- metadata$title_status
+
+# Initialize a matrix to store the p-values
+num_clusters <- length(cluster_df_hclust)
+p_values <- matrix(nrow=num_clusters, ncol=2, dimnames=list(names(cluster_df_hclust), c("Unadjusted", "Adjusted")))
+
+
+
+# Subset assignment1_groups for comparison with clustering results
+subset_assignment1_groups <- assignment1_groups[1:length(hclust_cluster_assignments)]  # Adjusted this length
+
+
+for (i in 1:num_clusters) {
+  if (length(cluster_df_hclust[[i]]) < length(subset_assignment1_groups)) {
+    # Append a constant value, e.g., 1, to the end of the shorter vector until its length matches
+    cluster_df_hclust[[i]] <- c(cluster_df_hclust[[i]], rep(1, length(subset_assignment1_groups) - length(cluster_df_hclust[[i]])))
+  }
+}
+
+length(cluster_df_hclust[[i]])
+length(subset_assignment1_groups)
+
+# Perform chi-squared test for each clustering result
+for (i in 1:num_clusters) {
+  # Check for length mismatch
+  if (length(cluster_df_hclust[[i]]) != length(subset_assignment1_groups)) {
+    stop(paste0("Length mismatch for cluster ", i, "."))
+  }
+  
+  # Create table for chi-squared test
+  table_data <- table(cluster_df_hclust[[i]], subset_assignment1_groups)
+  
+  # Perform chi-squared test
+  chi_sq_test <- chisq.test(table_data)
+  
+  # Store the unadjusted p-value
+  p_values[i, "Unadjusted"] <- chi_sq_test$p.value
+}
+
+# Adjust p-values for multiple hypothesis testing
+p_values[, "Adjusted"] <- p.adjust(p_values[, "Unadjusted"], method = "BH")
+
+# Convert to data frame for visualization
+p_values_df <- as.data.frame(p_values)
+
+# Display the table of p-values
+print(p_values_df)
+
+```
