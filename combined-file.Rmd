@@ -36,7 +36,7 @@ annotation_db_name <- "org.Mm.eg.db"
 setwd(working_directory)
 
 # installs and loads required packages
-required_packages <- c("readr", "AnnotationDbi", "BiocManager", "sessioninfo", "magrittr", "tidyverse", "umap", "cowplot", "ggplot2", "devtools", "gprofiler2", "clusterProfiler", "ggalluvial", "topGO", "cluster", "matrixStats")
+required_packages <- c("readr", "AnnotationDbi", "BiocManager", "sessioninfo", "magrittr", "tidyverse", "umap", "cowplot", "ggplot2", "devtools", "gprofiler2", "clusterProfiler", "ggalluvial", "topGO", "cluster", "matrixStats", "cli", "tidymodels")
 new_packages <- required_packages[!(required_packages %in% installed.packages()[,"Package"])]
 if(length(new_packages)) install.packages(new_packages)
 library(sessioninfo)
@@ -52,6 +52,8 @@ library(topGO)
 library(clusterProfiler)
 library(cluster)
 library(matrixStats)
+library(tidymodels)
+
 
 if (!("DESeq2" %in% installed.packages())) {
   BiocManager::install("DESeq2", update = FALSE)
@@ -72,13 +74,9 @@ if (!(annotation_db_name %in% installed.packages())) {
   BiocManager::install(annotation_db_name, update = FALSE)
 }
 
-install_github("jokergoo/ComplexHeatmap", force = TRUE)
+#install_github("jokergoo/ComplexHeatmap", force = TRUE)
 library(ComplexHeatmap)
-
-
 library(org.Mm.eg.db)
-
-
 
 # sets random seed
 set.seed(50341)
@@ -1442,3 +1440,208 @@ p_values_df <- as.data.frame(p_values)
 print(p_values_df)
 
 ```
+
+
+Only thing you need to execute above this line is the cell that imports all 
+libraries. (Lines 35-82)
+# ----------------------------------------------------------------------------
+
+Part 4
+
+Section below is just combination of previous code so that we don't have to 
+rerun it all. we can delete it once everything is working.
+
+```{r filepath_two, include=FALSE}
+working_directory <- "C:/Users/Matheus/OneDrive/University of Florida/JUNIOR FALL/CGS4144/combined-project"
+data_dir <- file.path("data", "SRP094496")
+data_file <- file.path(data_dir, "SRP094496.tsv")
+metadata_file <- file.path(data_dir, "metadata_SRP094496.tsv")
+results_dir <- "results"
+plots_dir <- "plots"
+annotation_db_name <- "org.Mm.eg.db"
+```
+
+
+```{r loads data}
+
+# loads the results file after running previous code section
+metadata <- readr::read_tsv(metadata_file)
+mapped_file <- file.path(results_dir, "mapped_df.tsv")
+mapped <- readr::read_tsv(mapped_file)
+
+# processes the data data
+drop <- c("Ensembl","all_hugo_ids")
+df_numerical <- mapped[,!(names(mapped) %in% drop)]
+df_non_na <- na.omit(df_numerical)
+df_averaged <- df_non_na %>%
+  group_by(first_mapped_hugo_id) %>%
+  summarise(across(where(is.numeric), ~mean(.x, na.rm = TRUE)), .groups = 'drop')
+expression_df <- df_averaged %>%
+  tibble::column_to_rownames("first_mapped_hugo_id")
+
+# displays number of genes and samples
+cat('It includes', dim(expression_df)[1], 'genes and', dim(expression_df)[2], 'samples.')
+
+# log scale the data
+log_scaled_mapped <- log(expression_df[-1] + 1)
+median_ranges <- apply(log_scaled_mapped, 1, function(row) {range(row)[2] - range(row)[1]})
+
+
+
+gene_expression <- mapped
+gene_values <- c(10, 100, 1000, 5000, 10000)
+
+
+# store gene IDs in vars and drop them from main df
+# this is so rowVars works (doesn't work with columsn of val <char>)
+symbol <- gene_expression$first_mapped_hugo_id
+Ensembl <- expression_df$Ensembl
+gene_expression$first_mapped_hugo_id <- NULL
+gene_expression$all_hugo_ids <- NULL
+gene_expression$Ensembl <- NULL
+
+# calculate variances for each gene
+gene_variability <- rowVars(as.matrix(gene_expression))
+
+# bind the variances and gene IDs
+unsorted_gene_vars <- cbind(1:length(symbol), symbol, gene_variability)
+unsorted_gene_vars
+sorted_gene_vars <- unsorted_gene_vars[order(as.numeric(unsorted_gene_vars[, 3]), decreasing=TRUE), ] 
+sorted_gene_vars
+
+# drop NA vals
+sorted_gene_vars_no_na <- sorted_gene_vars[complete.cases(sorted_gene_vars), ]
+sorted_gene_vars_no_na
+
+# grabs first x number of genes
+most_var_10 <- sorted_gene_vars_no_na[1:10, ]
+most_var_100 <- sorted_gene_vars_no_na[1:100, ]
+most_var_1000 <- sorted_gene_vars_no_na[1:1000, ]
+most_var_5000 <- sorted_gene_vars_no_na[1:5000, ]
+most_var_10000 <- sorted_gene_vars_no_na[1:10000, ]
+
+# assumes base case uses 5000 genes
+data_to_cluster <- gene_expression[most_var_5000[,1], ]
+
+
+```
+
+Fill out one of the following (we will delete the extra one since there are 5)
+
+```{r support vector machine}
+
+
+
+```
+
+
+
+```{r logistic regression}
+
+
+
+```
+
+
+
+```{r random forest}
+
+
+
+```
+
+
+
+```{r k nearest neighbors}
+
+
+
+```
+
+
+
+```{r naive bayes}
+
+library(e1071)
+library(tidymodels)
+
+install.packages("rminer")
+library(rminer)
+
+metadata <- readr::read_tsv(metadata_file)
+
+# same metadata processing and creation of assignment1_groups as before
+metadata <- metadata %>%
+  dplyr::mutate(title_status = dplyr::case_when(
+    stringr::str_detect(refinebio_title, "PM-\\d+") ~ "PM",
+    TRUE ~ "other"
+  ))
+
+
+labels <- metadata$title_status
+subset_labels <- labels[1:5000] # makes subset be 5000 so the length matches
+
+# trains the Naive Bayes model
+naive_bayes_model <- naiveBayes(data_to_cluster, subset_labels)
+
+# predicts using the trained model 
+predictions <- predict(naive_bayes_model, data_to_cluster)
+
+
+
+
+
+
+
+# split the data into training and testing sets
+
+data_split <- initial_split(data.frame(data_to_cluster, subset_labels), prop = 0.75)
+train_data <- training(data_split)
+test_data <- testing(data_split)
+
+
+
+# Define the model specification
+naive_spec <- naive_bayes() %>%
+  set_engine("e1071")
+
+# Fit the model
+naive_fit <- naive_spec %>%
+  fit(subset_labels ~ ., data = train_data)
+
+# Predict on the test set
+naive_results <- predict(naive_fit, test_data)
+
+# Evaluate the performance
+naive_metrics <- metrics(naive_results, truth = subset_labels, estimate = .pred_class)
+
+# Extract gene signatures
+# For Naive Bayes, we'll look at the variance of probabilities across classes
+gene_importance <- apply(naive_fit$fit$tables, 2, var)
+gene_signatures <- names(gene_importance)[order(gene_importance, decreasing = TRUE)]
+
+# Rerun for different numbers of genes
+gene_counts <- c(10, 100, 1000, 10000)
+results_list <- list()
+
+for (g in gene_counts) {
+  top_genes <- gene_signatures[1:g]
+  train_subset <- train_data[, c(top_genes, "subset_labels")]
+  test_subset <- test_data[, c(top_genes, "subset_labels")]
+  
+  # Fit the model
+  naive_fit_subset <- naive_spec %>%
+    fit(subset_labels ~ ., data = train_subset)
+  
+  # Predict on the test set
+  naive_results_subset <- predict(naive_fit_subset, test_subset)
+  
+  # Evaluate the performance
+  results_list[[paste0("genes_", g)]] <- metrics(naive_results_subset, truth = subset_labels, estimate = .pred_class)
+}
+
+# Print the results
+results_list
+
+```
+
