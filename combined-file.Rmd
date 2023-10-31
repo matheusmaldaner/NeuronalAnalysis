@@ -1564,6 +1564,35 @@ predictions <- predict(logistic_model, newdata = test_data, type = "response")
 df_predictions <- data.frame(predictions = round(predictions))
 table(df_predictions$predictions)
 
+auc_list <- list()
+data_to_cluster <- gene_expression[most_var_10000[,1], ]
+for (x in c(10,100,1000,10000)) {
+  df <- data.frame(t(data_to_cluster[1:x,]), title_status = labels)
+  df <- df[sample(nrow(df)), ]
+  
+  split_indices <- createDataPartition(df$title_status, p = 0.2, list = FALSE)
+  train_data <- df[-split_indices, ]
+  test_data <- df[split_indices, ]
+    
+  logistic_model <- glm(title_status ~ ., data = train_data, family = "binomial")
+  predictions <- predict(logistic_model, newdata = test_data, type = "response")
+  
+  df_predictions <- data.frame(predictions = round(predictions))
+  print(table(df_predictions$predictions))
+  
+  
+  roc_obj <- roc(test_data$title_status, predictions)
+  auc_value <- auc(roc_obj)
+  auc_list <- append(auc_list, auc_value)
+  
+}
+auc_list
+
+
+gene_coefficients <- coef(logistic_model)[-1]
+sorted_genes <- names(gene_coefficients[order(abs(gene_coefficients), decreasing = TRUE)])
+sorted_genes
+
 
 
 ```
