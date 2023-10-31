@@ -33,7 +33,7 @@ annotation_db_name <- "org.Mm.eg.db"
 ## Downloads the necessary packages
 
 ```{r libraries, include=FALSE}
-setwd(working_directory)
+
 
 # installs and loads required packages
 required_packages <- c("readr", "AnnotationDbi", "BiocManager", "sessioninfo", "magrittr", "tidyverse", "umap", "cowplot", "ggplot2", "devtools", "gprofiler2", "clusterProfiler", "ggalluvial", "topGO", "cluster", "matrixStats", "cli", "tidymodels")
@@ -1545,15 +1545,74 @@ Fill out one of the following (we will delete the extra one since there are 5)
 
 
 ```{r random forest}
+if (!("randomForest" %in% rownames(installed.packages()))) {
+  install.packages("randomForest")
+}
+library(randomForest)
+library(tidymodels)
+
+metadata <- readr::read_tsv(metadata_file)
+# same metadata processing and creation of assignment1_groups as before
+metadata <- metadata %>%
+  dplyr::mutate(title_status = dplyr::case_when(
+    stringr::str_detect(refinebio_title, "PM-\\d+") ~ "PM",
+    TRUE ~ "other"
+  ))
+
+labels <- metadata$title_status
+length(labels)
+subset_labels <- labels[1:5000] # makes subset be 5000 so the length matches
+sum(is.na(labels))
 
 
+# data splitting to train model
+# First split to split data into .80 training and .20 testing
+data_split <- initial_split(data.frame(data_to_cluster, subset_labels), prop = 0.80)
+train_data <- training(data_split)  # 80% for training + validation
+test_data <- testing(data_split)    # 20% for testing
+
+# Second Split to create a validation set that is .20 and 0.60 for training
+validation_split <- initial_split(train_data, prop = 0.75)
+train_final <- training(validation_split)   # Final training set (60% of original)
+validation_data <- testing(validation_split) # Validation set (20% of original)
+
+#build the model
+random_forest_model <- rand_forest(
+  trees = 500       # Default = 500
+) %>%  
+  set_engine("randomForest") %>% 
+  set_mode("classification")
+
+# create a recipe to define the preprocessing steps to prep data for model
+recipe <- recipe(subset_labels ~ ., data = train_final) %>% 
+          step_normalize(all_predictors())
+
+# create a workflow to bundle model and recipe
+workflow <- workflow() %>%
+            add_recipe(recipe) %>%
+            add_model(random_forest_model)
+
+# fit the model
+fit <- workflow %>%
+       fit(data = train_final)
+
+# Use the trained model to predict on validation data
+validation_results <- fit %>%
+                      predict(validation_data) %>%
+                      bind_cols(validation_data) %>%
+                      metrics(truth = subset_labels, estimate = .pred_class)
+
+# Evaluate the model on the test data
+test_results <- fit %>%
+                predict(test_data) %>%
+                bind_cols(test_data) %>%
+                metrics(truth = subset_labels, estimate = .pred_class)
 
 ```
 
 
 
 ```{r k nearest neighbors}
-
 
 
 ```
