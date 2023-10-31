@@ -1537,6 +1537,32 @@ Fill out one of the following (we will delete the extra one since there are 5)
 
 
 ```{r logistic regression}
+library(e1071)
+library(tidymodels)
+library(rminer)
+library(caret)
+
+metadata <- readr::read_tsv(metadata_file)
+
+# same metadata processing and creation of assignment1_groups as before
+metadata <- metadata %>%
+  dplyr::mutate(title_status = dplyr::case_when(
+    stringr::str_detect(refinebio_title, "PM-\\d+") ~ 1,
+    TRUE ~ 0
+  ))
+labels <- metadata$title_status
+
+df <- data.frame(t(data_to_cluster), title_status = labels)
+df <- df[sample(nrow(df)), ]
+split_indices <- createDataPartition(df$title_status, p = 0.2, list = FALSE)
+train_data <- df[-split_indices, ]
+test_data <- df[split_indices, ]
+
+logistic_model <- glm(title_status ~ ., data = train_data, family = "binomial")
+predictions <- predict(logistic_model, newdata = test_data, type = "response")
+
+df_predictions <- data.frame(predictions = round(predictions))
+table(df_predictions$predictions)
 
 
 
