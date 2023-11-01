@@ -1548,8 +1548,17 @@ Fill out one of the following (we will delete the extra one since there are 5)
 if (!("randomForest" %in% rownames(installed.packages()))) {
   install.packages("randomForest")
 }
+if (!("ranger" %in% rownames(installed.packages()))) {
+  install.packages("ranger")
+}
+if (!("vip" %in% rownames(installed.packages()))) {
+  install.packages("vip")
+}
+library(ranger)
 library(randomForest)
 library(tidymodels)
+library(vip)
+
 
 metadata <- readr::read_tsv(metadata_file)
 # same metadata processing and creation of assignment1_groups as before
@@ -1568,24 +1577,23 @@ data_to_cluster_t <- data.frame(t(data_to_cluster), title_status = labels)
 
 # data splitting to train model
 # First split to split data into .80 training and .20 testing
-data_split <- initial_split((data_to_cluster_t), prop = 0.80)
+data_split <- initial_split((data_to_cluster_t))
 train_data <- training(data_split)  # 80% for training + validation
 test_data <- testing(data_split)    # 20% for testing
 
 # Second Split to create a validation set that is .20 and 0.60 for training
-validation_split <- initial_split(train_data, prop = 0.75)
-train_final <- training(validation_split)   # Final training set (60% of original)
-validation_data <- testing(validation_split) # Validation set (20% of original)
+validation_split <- validation_split(train_data, prop = 0.75)
+
 
 #build the model
-random_forest_model <- rand_forest(
-  trees = 500       # Default = 500
+random_forest_model <- rand_forest(mtry = tune(), min_n = tune(),
+  trees = 200     
 ) %>%  
-  set_engine("randomForest") %>% 
+  set_engine("ranger", importance = "impurity") %>% 
   set_mode("classification")
 
 # create a recipe to define the preprocessing steps to prep data for model
-recipe <- recipe(title_status ~ ., data = train_final) %>% 
+recipe <- recipe(title_status ~ ., data = train_data) %>% 
           step_normalize(all_predictors())
 
 # create a workflow to bundle model and recipe
@@ -1593,65 +1601,60 @@ workflow <- workflow() %>%
             add_recipe(recipe) %>%
             add_model(random_forest_model)
 
-# fit the model
-fit <- workflow %>%
-       fit(data = train_final)
+random_forest_model
+extract_parameter_set_dials(random_forest_model)
+
+rf_res <- 
+  workflow %>% 
+  tune_grid(validation_split,
+            grid = 3,
+            control = control_grid(save_pred = TRUE),
+            metrics = metric_set(roc_auc))
+
+rf_res %>% 
+  show_best(metric = "roc_auc")
+# results of training and tuning our data
+rf_best <- 
+  rf_res %>% 
+  select_best(metric = "roc_auc")
+rf_best
+
+rf_res %>% 
+  collect_predictions()
+
+rf_auc <- 
+  rf_res %>% 
+  collect_predictions(parameters = rf_best) %>% 
+  roc_curve(title_status, .pred_PM) %>% ##shows predictions for pm can change to other
+  mutate(model = "Random Forest")
+
+rf_auc
 
 
-library(yardstick)
 
-# predict on train set, esnure that title is a factor and convert prediction to a factor
-test_predictions <- predict(fit, test_data)
-test_data$title_status <- as.factor(test_data$title_status)
-test_predictions$.pred_class <- as.factor(test_predictions$.pred_class)
+rf_mod <- 
+  rand_forest(mtry = 8, min_n = 7, trees = 1000) %>% 
+  set_engine("ranger", importance = "impurity") %>% 
+  set_mode("classification")
 
+last_rf_workflow <- 
+  workflow %>% 
+  update_model(rf_mod)
 
-# calculate metrics
-test_metrics <- test_predictions %>%
-                      bind_cols(test_data) %>%
-                      metrics(truth = title_status, estimate = .pred_class) %>%
-                      filter(.metric %in% c("accuracy", "precision", "recall", "f_meas"))
+rf_fit <- last_rf_workflow %>% last_fit(data_split)
 
-print(test_metrics)
+rf_fit %>% 
+  collect_metrics()
 
-# Predict on the validation set
-validation_predictions <- predict(fit, validation_data)
+rf_fit %>% # This shows the most important or signifcant genes
+  extract_fit_parsnip() %>% 
+  vip(num_features = 20)
 
-# Ensure that title_status in validation_data is a factor
-validation_data$title_status <- as.factor(validation_data$title_status)
+top_20_indices = c(2424, 228, 4884, 103, 4299, 2813, 1050, 122, 1969, 139, 4025, 252, 141, 2613, 1055, 1899, 1654, 1895, 1316, 3161)  
 
-# Convert prediction to a factor (if it's not already)
-validation_predictions$.pred_class <- as.factor(validation_predictions$.pred_class)
+top_gene_symbols = most_var_5000[top_indices, 2]
+top_gene_symbols #top 20 important genes
 
-# Calculate metrics on the validation set
-validation_metrics <- validation_predictions %>%
-                      bind_cols(validation_data) %>%
-                      metrics(truth = title_status, estimate = .pred_class) %>%
-                      filter(.metric %in% c("accuracy", "precision", "recall", "f_meas"))
-
-# Print out the validation metrics
-print(validation_metrics)
-
-
-# Evaluate the model on the test data
-test_set_predictions <- predict(fit, test_data)
-test_data$title_status <- as.factor(test_data$title_status)
-test_set_predictions$.pred_class <- as.factor(test_set_predictions$.pred_class)
-test_set_metrics <- test_set_predictions %>%
-                    bind_cols(test_data) %>%
-                    metrics(truth = title_status, estimate = .pred_class) %>%
-                    filter(.metric %in% c("accuracy", "precision", "recall", "f_meas"))
-
-# Print out the test set metrics
-print(test_set_metrics)
-
-# Extract gene Signatures 
-random_forest_model <- extract_fit_parsnip(fit)
-rf_model <- random_forest_model$fit
-
-feature_importance <- importance(rf_model)
-# Viewing the top important features
-head(feature_importance)
 
 ```
 
