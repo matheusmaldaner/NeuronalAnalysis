@@ -1562,12 +1562,13 @@ metadata <- metadata %>%
 labels <- metadata$title_status
 length(labels)
 subset_labels <- labels[1:5000] # makes subset be 5000 so the length matches
-sum(is.na(labels))
+
+data_to_cluster_t <- data.frame(t(data_to_cluster), title_status = labels)
 
 
 # data splitting to train model
 # First split to split data into .80 training and .20 testing
-data_split <- initial_split(data.frame(data_to_cluster, subset_labels), prop = 0.80)
+data_split <- initial_split((data_to_cluster_t), prop = 0.80)
 train_data <- training(data_split)  # 80% for training + validation
 test_data <- testing(data_split)    # 20% for testing
 
@@ -1584,7 +1585,7 @@ random_forest_model <- rand_forest(
   set_mode("classification")
 
 # create a recipe to define the preprocessing steps to prep data for model
-recipe <- recipe(subset_labels ~ ., data = train_final) %>% 
+recipe <- recipe(title_status ~ ., data = train_final) %>% 
           step_normalize(all_predictors())
 
 # create a workflow to bundle model and recipe
@@ -1596,17 +1597,61 @@ workflow <- workflow() %>%
 fit <- workflow %>%
        fit(data = train_final)
 
-# Use the trained model to predict on validation data
-validation_results <- fit %>%
-                      predict(validation_data) %>%
+
+library(yardstick)
+
+# predict on train set, esnure that title is a factor and convert prediction to a factor
+test_predictions <- predict(fit, test_data)
+test_data$title_status <- as.factor(test_data$title_status)
+test_predictions$.pred_class <- as.factor(test_predictions$.pred_class)
+
+
+# calculate metrics
+test_metrics <- test_predictions %>%
+                      bind_cols(test_data) %>%
+                      metrics(truth = title_status, estimate = .pred_class) %>%
+                      filter(.metric %in% c("accuracy", "precision", "recall", "f_meas"))
+
+print(test_metrics)
+
+# Predict on the validation set
+validation_predictions <- predict(fit, validation_data)
+
+# Ensure that title_status in validation_data is a factor
+validation_data$title_status <- as.factor(validation_data$title_status)
+
+# Convert prediction to a factor (if it's not already)
+validation_predictions$.pred_class <- as.factor(validation_predictions$.pred_class)
+
+# Calculate metrics on the validation set
+validation_metrics <- validation_predictions %>%
                       bind_cols(validation_data) %>%
-                      metrics(truth = subset_labels, estimate = .pred_class)
+                      metrics(truth = title_status, estimate = .pred_class) %>%
+                      filter(.metric %in% c("accuracy", "precision", "recall", "f_meas"))
+
+# Print out the validation metrics
+print(validation_metrics)
+
 
 # Evaluate the model on the test data
-test_results <- fit %>%
-                predict(test_data) %>%
-                bind_cols(test_data) %>%
-                metrics(truth = subset_labels, estimate = .pred_class)
+test_set_predictions <- predict(fit, test_data)
+test_data$title_status <- as.factor(test_data$title_status)
+test_set_predictions$.pred_class <- as.factor(test_set_predictions$.pred_class)
+test_set_metrics <- test_set_predictions %>%
+                    bind_cols(test_data) %>%
+                    metrics(truth = title_status, estimate = .pred_class) %>%
+                    filter(.metric %in% c("accuracy", "precision", "recall", "f_meas"))
+
+# Print out the test set metrics
+print(test_set_metrics)
+
+# Extract gene Signatures 
+random_forest_model <- extract_fit_parsnip(fit)
+rf_model <- random_forest_model$fit
+
+feature_importance <- importance(rf_model)
+# Viewing the top important features
+head(feature_importance)
 
 ```
 
