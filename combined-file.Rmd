@@ -1594,6 +1594,24 @@ sorted_genes <- names(gene_coefficients[order(abs(gene_coefficients), decreasing
 sorted_genes
 
 
+library(pheatmap)
+library(dendextend)
+
+head(test_data)
+dim(test_data)
+
+scaled <- log(test_data[predictions > 0.5,] + 1)
+annotation_data_heatmap <- data.frame(status = round(scaled$title_status))
+
+
+pheatmap(
+  as.matrix(scaled,  rownames.force = TRUE),
+  cluster_rows = TRUE,
+  show_colnames = FALSE,  # You can set this to TRUE if you want to display column names
+  legend = TRUE, 
+  main = "Heatmap of 5,000 Genes",
+  filename = "plots/heatmaps/ass4_logregr.png"  # You can specify the file name and format
+)
 
 ```
 
