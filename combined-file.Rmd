@@ -1663,6 +1663,7 @@ importance_scores # shows all variables and importance
 
 gene_sets <- list(df_10 = gene_expression[most_var_10[,1], ], df_100 = gene_expression[most_var_100[,1], ], df_1000 = gene_expression[most_var_1000[,1], ], df_10000 = gene_expression[most_var_10000[,1], ])
 results <- list()
+results_auc <- list()
 
 for (set_name in names(gene_sets)) {
   # Subset the original dataset
@@ -1688,13 +1689,23 @@ for (set_name in names(gene_sets)) {
 
   fit <- workflow %>% fit(data = train_data)
 
-  # Evaluate the model
-  import_fut <- fit %>% extract_fit_parsnip()
-importance_scores <- vip::vi(import_fut, num_features=nrow(train_data))
-importance_scores # shows all variables and importance
+   # Predict on test set
+  # Predict on the test set and get probabilities
+test_predictions <- predict(fit, test_data, type = "prob") %>% 
+                    bind_cols(test_data)
+
+test_predictions$title_status <- as.factor(test_predictions$title_status)
+roc_results <- roc_auc(test_predictions, truth = title_status, .pred_PM) #can change to other depends on what score to identify
 
   # Store results
-  results[[set_name]] <- importance_scores
+  results[[set_name]] <- list(
+    importance_scores = vip::vi(fit %>% extract_fit_parsnip(), num_features = nrow(train_data)),
+    auc = roc_results$.estimate
+  )
+
+}
+str(test_predictions)
+  # Store results
 }
 for (set_name in names(results)) {
   cat("\nResults for", set_name, ":\n")
