@@ -1653,9 +1653,53 @@ rf_fit %>% # This shows the most important or signifcant genes
 top_20_indices = c(2424, 228, 4884, 103, 4299, 2813, 1050, 122, 1969, 139, 4025, 252, 141, 2613, 1055, 1899, 1654, 1895, 1316, 3161)  
 
 top_gene_symbols = most_var_5000[top_indices, 2]
-top_gene_symbols #top 20 important genes
+top_gene_symbols #top 20 important
+
+import_fut <- rf_fit %>% extract_fit_parsnip()
+importance_scores <- vip::vi(import_fut, num_features=nrow(train_data))
+importance_scores # shows all variables and importance
+
+#runs with mult
+
+gene_sets <- list(df_10 = gene_expression[most_var_10[,1], ], df_100 = gene_expression[most_var_100[,1], ], df_1000 = gene_expression[most_var_1000[,1], ], df_10000 = gene_expression[most_var_10000[,1], ])
+results <- list()
+
+for (set_name in names(gene_sets)) {
+  # Subset the original dataset
+  subset_data <- data.frame(t(gene_sets[[set_name]]),title_status = labels)
 
 
+  # Split the data
+  data_split <- initial_split(subset_data, prop = 0.8)
+  train_data <- training(data_split)
+  test_data <- testing(data_split)
+
+  # Fit the model (adjust model code as per your setup)
+  model <- 
+  rand_forest(mtry = 8, min_n = 7, trees = 1000) %>% 
+  set_engine("ranger", importance = "impurity") %>% 
+  set_mode("classification")
+
+  recipe <- recipe(title_status ~ ., data = train_data)
+
+  workflow <- workflow() %>%
+              add_recipe(recipe) %>%
+              add_model(model)
+
+  fit <- workflow %>% fit(data = train_data)
+
+  # Evaluate the model
+  import_fut <- fit %>% extract_fit_parsnip()
+importance_scores <- vip::vi(import_fut, num_features=nrow(train_data))
+importance_scores # shows all variables and importance
+
+  # Store results
+  results[[set_name]] <- importance_scores
+}
+for (set_name in names(results)) {
+  cat("\nResults for", set_name, ":\n")
+  print(results[[set_name]])
+} #prints all variations
 ```
 
 
