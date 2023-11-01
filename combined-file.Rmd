@@ -1537,8 +1537,81 @@ Fill out one of the following (we will delete the extra one since there are 5)
 
 
 ```{r logistic regression}
+library(e1071)
+library(tidymodels)
+library(rminer)
+library(caret)
+
+metadata <- readr::read_tsv(metadata_file)
+
+# same metadata processing and creation of assignment1_groups as before
+metadata <- metadata %>%
+  dplyr::mutate(title_status = dplyr::case_when(
+    stringr::str_detect(refinebio_title, "PM-\\d+") ~ 1,
+    TRUE ~ 0
+  ))
+labels <- metadata$title_status
+
+df <- data.frame(t(data_to_cluster), title_status = labels)
+df <- df[sample(nrow(df)), ]
+split_indices <- createDataPartition(df$title_status, p = 0.2, list = FALSE)
+train_data <- df[-split_indices, ]
+test_data <- df[split_indices, ]
+
+logistic_model <- glm(title_status ~ ., data = train_data, family = "binomial")
+predictions <- predict(logistic_model, newdata = test_data, type = "response")
+
+df_predictions <- data.frame(predictions = round(predictions))
+table(df_predictions$predictions)
+
+auc_list <- list()
+data_to_cluster <- gene_expression[most_var_10000[,1], ]
+for (x in c(10,100,1000,10000)) {
+  df <- data.frame(t(data_to_cluster[1:x,]), title_status = labels)
+  df <- df[sample(nrow(df)), ]
+  
+  split_indices <- createDataPartition(df$title_status, p = 0.2, list = FALSE)
+  train_data <- df[-split_indices, ]
+  test_data <- df[split_indices, ]
+    
+  logistic_model <- glm(title_status ~ ., data = train_data, family = "binomial")
+  predictions <- predict(logistic_model, newdata = test_data, type = "response")
+  
+  df_predictions <- data.frame(predictions = round(predictions))
+  print(table(df_predictions$predictions))
+  
+  
+  roc_obj <- roc(test_data$title_status, predictions)
+  auc_value <- auc(roc_obj)
+  auc_list <- append(auc_list, auc_value)
+  
+}
+auc_list
 
 
+gene_coefficients <- coef(logistic_model)[-1]
+sorted_genes <- names(gene_coefficients[order(abs(gene_coefficients), decreasing = TRUE)])
+sorted_genes
+
+
+library(pheatmap)
+library(dendextend)
+
+head(test_data)
+dim(test_data)
+
+scaled <- log(test_data[predictions > 0.5,] + 1)
+annotation_data_heatmap <- data.frame(status = round(scaled$title_status))
+
+
+pheatmap(
+  as.matrix(scaled,  rownames.force = TRUE),
+  cluster_rows = TRUE,
+  show_colnames = FALSE,  # You can set this to TRUE if you want to display column names
+  legend = TRUE, 
+  main = "Heatmap of 5,000 Genes",
+  filename = "plots/heatmaps/ass4_logregr.png"  # You can specify the file name and format
+)
 
 ```
 
