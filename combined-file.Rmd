@@ -1719,13 +1719,20 @@ rf_fit <- last_rf_workflow %>% last_fit(data_split)
 rf_fit %>% 
   collect_metrics()
 
+test_predictions <- predict(fit, test_data, type = "prob") %>% 
+                    bind_cols(test_data)
+
+test_predictions$title_status <- as.factor(test_predictions$title_status)
+roc_results <- roc_auc(test_predictions, truth = title_status, .pred_PM)
+roc_results
+
 rf_fit %>% # This shows the most important or signifcant genes
   extract_fit_parsnip() %>% 
   vip(num_features = 20)
 
 top_20_indices = c(2424, 228, 4884, 103, 4299, 2813, 1050, 122, 1969, 139, 4025, 252, 141, 2613, 1055, 1899, 1654, 1895, 1316, 3161)  
 
-top_gene_symbols = most_var_5000[top_indices, 2]
+top_gene_symbols = most_var_5000[top_20_indices, 2]
 top_gene_symbols #top 20 important
 
 import_fut <- rf_fit %>% extract_fit_parsnip()
@@ -1778,7 +1785,7 @@ roc_results <- roc_auc(test_predictions, truth = title_status, .pred_PM) #can ch
 
 }
 
-}
+
 for (set_name in names(results)) {
   cat("\nResults for", set_name, ":\n")
   print(results[[set_name]])
@@ -1815,16 +1822,19 @@ print(head(rownames(annotation_data)))
 
 # Automated check for row name matching and order
 identical(rownames(scaled_data), rownames(annotation_data))
-annotation_data$Group <- as.character(annotation_data$Group)
+annotation_data$Group <- factor(annotation_data$Group)
+
+# Check the new factor levels
+levels(annotation_data$Group)
 
 # Define colors for annotations
-ann_colors <- list(Group = c("PM" = "blue", "Other" = "red"))
+ann_colors <- list(Group = c("PM" = "blue", "other" = "red"))
 
 # Generate heatmap
 library(pheatmap)
 pheatmap(
   as.matrix(scaled_data),
-  annotation_col = annotation_data,
+  annotation_row  = annotation_data,
   annotation_colors = ann_colors,
   show_rownames = TRUE,
   show_colnames = TRUE,
