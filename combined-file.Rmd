@@ -1452,7 +1452,7 @@ Section below is just combination of previous code so that we don't have to
 rerun it all. we can delete it once everything is working.
 
 ```{r filepath_two, include=FALSE}
-working_directory <- "C:/Users/ethanfan/BioinformaticsProject/"
+working_directory <- "C:/Users/Matheus/OneDrive/University of Florida/JUNIOR FALL/CGS4144/combined-project"
 data_dir <- file.path("data", "SRP094496")
 data_file <- file.path(data_dir, "SRP094496.tsv")
 metadata_file <- file.path(data_dir, "metadata_SRP094496.tsv")
@@ -1651,7 +1651,6 @@ pheatmap(
   filename = "plots/heatmaps/ass4_svm.png"  # Specify the file name and format
 )
 
-
 ```
 
 
@@ -1818,11 +1817,16 @@ rf_res %>%
 rf_auc <- 
   rf_res %>% 
   collect_predictions(parameters = rf_best) %>% 
-  roc_curve(title_status, .pred_PM) %>% ##shows predictions for pm can change to other
+  roc_curve(title_status, .pred_other) %>% ##shows predictions for pm can change to other
   mutate(model = "Random Forest")
 
 rf_auc
-
+bind_rows(rf_auc) %>% 
+  ggplot(aes(x = 1 - specificity, y = sensitivity, col = model)) + 
+  geom_path(lwd = 1.5, alpha = 0.8) +
+  geom_abline(lty = 3) + 
+  coord_equal() + 
+  scale_color_viridis_d(option = "plasma", end = .6)
 
 
 rf_mod <- 
@@ -1843,18 +1847,10 @@ rf_fit %>% # This shows the most important or signifcant genes
   extract_fit_parsnip() %>% 
   vip(num_features = 20)
 
-top_20_indices = c(2424, 228, 4884, 103, 4299, 2813, 1050, 122, 1969, 139, 4025, 252, 141, 2613, 1055, 1899, 1654, 1895, 1316, 3161)  
-
-top_gene_symbols = most_var_5000[top_indices, 2]
-top_gene_symbols #top 20 important
-
-import_fut <- rf_fit %>% extract_fit_parsnip()
-importance_scores <- vip::vi(import_fut, num_features=nrow(train_data))
-importance_scores # shows all variables and importance
 
 #runs with mult
 
-gene_sets <- list(df_10 = gene_expression[most_var_10[,1], ], df_100 = gene_expression[most_var_100[,1], ], df_1000 = gene_expression[most_var_1000[,1], ], df_10000 = gene_expression[most_var_10000[,1], ])
+gene_sets <- list(df_10 = gene_expression[most_var_10[,1], ], df_100 = gene_expression[most_var_100[,1], ], df_1000 = gene_expression[most_var_1000[,1], ], df_5000 = gene_expression[most_var_5000[,1], ], df_10000 = gene_expression[most_var_10000[,1], ])
 results <- list()
 results_auc <- list()
 
@@ -1888,7 +1884,7 @@ test_predictions <- predict(fit, test_data, type = "prob") %>%
                     bind_cols(test_data)
 
 test_predictions$title_status <- as.factor(test_predictions$title_status)
-roc_results <- roc_auc(test_predictions, truth = title_status, .pred_PM) #can change to other depends on what score to identify
+roc_results <- roc_auc(test_predictions, truth = title_status, .pred_other) #can change to other depends on what score to identify
 
   # Store results
   results[[set_name]] <- list(
@@ -1897,13 +1893,120 @@ roc_results <- roc_auc(test_predictions, truth = title_status, .pred_PM) #can ch
   )
 
 }
-str(test_predictions)
-  # Store results
-}
+
+
 for (set_name in names(results)) {
   cat("\nResults for", set_name, ":\n")
   print(results[[set_name]])
 } #prints all variations
+
+
+
+
+#heatmap
+library(pheatmap)
+library(dendextend)
+
+importance_scores
+importance_scores$index_num <- as.numeric(gsub("X", "", importance_scores$Variable))
+
+importance_scores$gene_symbol <- most_var_5000[importance_scores$index_num, 2]
+head(importance_scores)
+
+head(test_data)
+dim(test_data)
+
+significant_genes <- importance_scores[importance_scores$Importance > 0.15, c("gene_symbol", "Importance", "Variable")]
+heatmap_data <- test_data[significant_genes$"Variable"]
+print(dim(significant_genes))
+colnames(heatmap_data) <- significant_genes$gene_symbol
+
+
+# Log transform and scaling (if applicable)
+scaled_data <- log(heatmap_data + 1)
+
+# Create annotation data frame
+filtered_data <- data_to_cluster_t[rownames(data_to_cluster_t) %in% rownames(heatmap_data), ]
+
+annotation_data <- data.frame(Group = filtered_data$title_status)
+rownames(annotation_data) <- rownames(scaled_data)
+
+# Print the first few row names to check manually
+print(head(rownames(scaled_data)))
+print(head(rownames(annotation_data)))
+
+# Automated check for row name matching and order
+identical(rownames(scaled_data), rownames(annotation_data))
+annotation_data$Group <- factor(annotation_data$Group)
+
+# Check the new factor levels
+levels(annotation_data$Group)
+
+# Define colors for annotations
+ann_colors <- list(Group = c("PM" = "blue", "other" = "red"))
+
+# Generate heatmap
+library(pheatmap)
+pheatmap(
+  as.matrix(scaled_data),
+  annotation_row  = annotation_data,
+  annotation_colors = ann_colors,
+  show_rownames = TRUE,
+  show_colnames = TRUE,
+  legend = TRUE,
+  cluster_rows = TRUE,
+  cluster_cols = TRUE,
+  fontsize_row = 4,
+  fontsize_col = 6,
+  main = "Heatmap of Significant Genes Above 0.15 Importance over 5,000 Genes",
+  filename = "plots/heatmaps/ass4_randomForest.png"  
+)
+
+significant_genes <- importance_scores[importance_scores$Importance > 0.15, c("gene_symbol", "Importance", "Variable")]
+heatmap_data <- test_data[significant_genes$"Variable"]
+print(dim(significant_genes))
+colnames(heatmap_data) <- significant_genes$gene_symbol
+
+
+#overlap
+#10
+results$df_10$importance_scores
+results$df_10$importance_scores$index_num <- as.numeric(gsub("X", "", results$df_10$importance_scores$Variable))
+results$df_10$importance_scores$gene_symbol <- most_var_10[results$df_10$importance_scores$index_num, 2]
+head(results$df_10$importance_scores)
+significant_genes_10 <- results$df_10$importance_scores[results$df_10$importance_scores$Importance > 0.15, c("gene_symbol", "Importance", "Variable")]
+
+#100
+results$df_100$importance_scores
+results$df_100$importance_scores$index_num <- as.numeric(gsub("X", "", results$df_100$importance_scores$Variable))
+results$df_100$importance_scores$gene_symbol <- most_var_100[results$df_100$importance_scores$index_num, 2]
+head(results$df_100$importance_scores)
+significant_genes_100 <- results$df_100$importance_scores[results$df_100$importance_scores$Importance > 0.15, c("gene_symbol", "Importance", "Variable")]
+
+#1000
+results$df_1000$importance_scores
+results$df_1000$importance_scores$index_num <- as.numeric(gsub("X", "", results$df_1000$importance_scores$Variable))
+results$df_1000$importance_scores$gene_symbol <- most_var_1000[results$df_1000$importance_scores$index_num, 2]
+head(results$df_1000$importance_scores)
+significant_genes_1000 <- results$df_1000$importance_scores[results$df_1000$importance_scores$Importance > 0.15, c("gene_symbol", "Importance", "Variable")]
+
+#10000
+results$df_10000$importance_scores
+results$df_10000$importance_scores$index_num <- as.numeric(gsub("X", "", results$df_10000$importance_scores$Variable))
+results$df_10000$importance_scores$gene_symbol <- most_var_10000[results$df_10000$importance_scores$index_num, 2]
+head(results$df_10000$importance_scores)
+significant_genes_10000 <- results$df_10000$importance_scores[results$df_10000$importance_scores$Importance > 0.15, c("gene_symbol", "Importance", "Variable")]
+
+genes_10 <- significant_genes_10$gene_symbol
+genes_100 <- significant_genes_100$gene_symbol
+genes_1000 <- significant_genes_1000$gene_symbol
+genes_5000 <- significant_genes$gene_symbol
+genes_10000 <- significant_genes_10000$gene_symbol
+common_genes <- Reduce(intersect, list(genes_1000, genes_5000, genes_10000))
+print(common_genes)
+
+table(common_genes)
+ 
 ```
 
 
@@ -1921,8 +2024,6 @@ library(e1071)
 library(tidymodels)
 
 install.packages("rminer")
-install.packages("rminer", dependencies = c("Depends", "Suggests"))
-suppressPackageStartupMessages(library(rminer))
 library(rminer)
 
 metadata <- readr::read_tsv(metadata_file)
@@ -2001,3 +2102,4 @@ for (g in gene_counts) {
 results_list
 
 ```
+
