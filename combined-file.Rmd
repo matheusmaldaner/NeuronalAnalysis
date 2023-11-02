@@ -1452,7 +1452,7 @@ Section below is just combination of previous code so that we don't have to
 rerun it all. we can delete it once everything is working.
 
 ```{r filepath_two, include=FALSE}
-working_directory <- "C:/Users/Matheus/OneDrive/University of Florida/JUNIOR FALL/CGS4144/combined-project"
+working_directory <- "C:/Users/ethanfan/BioinformaticsProject/"
 data_dir <- file.path("data", "SRP094496")
 data_file <- file.path(data_dir, "SRP094496.tsv")
 metadata_file <- file.path(data_dir, "metadata_SRP094496.tsv")
@@ -1531,9 +1531,15 @@ Fill out one of the following (we will delete the extra one since there are 5)
 ```{r support vector machine}
 install.packages("e1071")
 install.packages("pROC")
+install.packages("ggfortify")
+install.packages("caret")
+library(caret)
 library(e1071)
 library(pROC)
 library(dplyr)
+library(ggplot2)
+library(ggfortify)
+library(gridExtra)
 
 metadata <- readr::read_tsv(metadata_file)
 
@@ -1560,11 +1566,29 @@ svm_model <- svm(title_status ~ ., data = train_data, kernel = "linear")
 
 svm_predictions <- predict(svm_model, test_data)
 
-df_svm_predictions <- data.frame(svm_predictions = round(svm_predictions))
-table(df_svm_predictions)
-output_directory <- "plots/tables/"
-output_file <- paste0(output_directory, "svm_predictions.csv")
-write.csv(df_svm_predictions, file = output_file, row.names = FALSE)
+pca <- prcomp(train_data[,-ncol(train_data)])
+train_pca <- data.frame(pca$x[,1:2])
+train_pca$title_status <- train_data$title_status
+
+# Train SVM on the two principal components
+svm_model_2D <- svm(title_status ~ ., data = train_pca, kernel = "linear")
+
+# Plotting
+grid <- expand.grid(PC1 = seq(min(train_pca$PC1), max(train_pca$PC1), length.out = 200),
+                    PC2 = seq(min(train_pca$PC2), max(train_pca$PC2), length.out = 200))
+
+# Predict with SVM
+predictions <- predict(svm_model_2D, grid, decision.values = TRUE)
+grid$decision_values <- attr(predictions, "decision.values")
+
+# Plot using ggplot
+svm_ggplot <- ggplot(data = grid, aes(x = PC1, y = PC2)) +
+  geom_contour(aes(z = decision_values)) +
+  geom_point(data=train_pca, aes(color = as.factor(title_status))) +
+  theme_minimal()
+
+# Save using ggsave
+ggsave("plots/svm_plot.png", svm_ggplot, width=8, height=6)
 
 # Extract Gene Signatures
 support_vector_indices <- svm_model$index
@@ -1897,6 +1921,8 @@ library(e1071)
 library(tidymodels)
 
 install.packages("rminer")
+install.packages("rminer", dependencies = c("Depends", "Suggests"))
+suppressPackageStartupMessages(library(rminer))
 library(rminer)
 
 metadata <- readr::read_tsv(metadata_file)
