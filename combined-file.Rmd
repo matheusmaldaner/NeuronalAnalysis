@@ -1625,11 +1625,11 @@ for (x in c(10, 100, 1000, 10000)) {
 }
 auc_list
 
-gene_coefficients <- coef(svm_model)[-1]
-sorted_genes <- names(gene_coefficients[order(abs(gene_coefficients), decreasing = TRUE)])
-
 library(pheatmap)
 library(dendextend)
+
+gene_coefficients <- coef(svm_model)[-1]
+sorted_genes <- names(gene_coefficients[order(abs(gene_coefficients), decreasing = TRUE)])
 
 head(test_data)
 dim(test_data)
@@ -1640,15 +1640,36 @@ selected_data <- test_data[svm_predictions > threshold, ]
 # Log scale the selected data (if necessary)
 scaled <- log(selected_data + 1)
 
-annotation_data_heatmap <- data.frame(status = round(scaled$title_status))
+library(dplyr)
 
+# First, create a lookup data frame from metadata
+lookup <- metadata %>%
+  select(refinebio_accession_code) %>%
+  mutate(title_status = ifelse(refinebio_accession_code %in% rownames(scaled), "PM", "other"))
+
+# Now, join this lookup with the 'scaled' data
+scaled_with_status <- scaled %>%
+  rownames_to_column(var = "refinebio_accession_code") %>%
+  left_join(lookup, by = "refinebio_accession_code") %>%
+  column_to_rownames(var = "refinebio_accession_code")
+
+annotation_data <- data.frame(Group = scaled_with_status$title_status.y)
+rownames(annotation_data) <- rownames(scaled_with_status)
+
+ann_colors <- list(Group = c("PM" = "blue", "other" = "red"))
+
+# Generate heatmap
 pheatmap(
-  as.matrix(scaled, rownames.force = TRUE),
+  as.matrix(scaled),
+  annotation_row  = annotation_data,
+  annotation_colors = ann_colors,
+  show_rownames = TRUE,
+  show_colnames = TRUE,
+  legend = TRUE,
   cluster_rows = TRUE,
-  show_colnames = FALSE,  # You can set this to TRUE if you want to display column names
-  legend = TRUE, 
   main = "Heatmap of Selected Genes (SVM)",
-  filename = "plots/heatmaps/ass4_svm.png"  # Specify the file name and format
+  filename = "plots/heatmaps/ass4_svm.png",
+  fontsize_col = 8
 )
 
 ```
@@ -1706,7 +1727,6 @@ for (x in c(10,100,1000,10000)) {
   
 }
 auc_list
-
 
 gene_coefficients <- coef(logistic_model)[-1]
 sorted_genes <- names(gene_coefficients[order(abs(gene_coefficients), decreasing = TRUE)])
