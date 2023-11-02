@@ -1777,13 +1777,67 @@ roc_results <- roc_auc(test_predictions, truth = title_status, .pred_PM) #can ch
   )
 
 }
-str(test_predictions)
-  # Store results
+
 }
 for (set_name in names(results)) {
   cat("\nResults for", set_name, ":\n")
   print(results[[set_name]])
 } #prints all variations
+
+library(pheatmap)
+library(dendextend)
+
+importance_scores
+importance_scores$index_num <- as.numeric(gsub("X", "", importance_scores$Variable))
+
+importance_scores$gene_symbol <- most_var_5000[importance_scores$index_num, 2]
+head(importance_scores)
+
+head(test_data)
+dim(test_data)
+
+significant_genes <- importance_scores[importance_scores$Importance > 0.1, c("gene_symbol", "Importance", "Variable")]
+heatmap_data <- test_data[significant_genes$"Variable"]
+
+
+# Log transform and scaling (if applicable)
+scaled_data <- log(heatmap_data + 1)
+
+# Create annotation data frame
+filtered_data <- data_to_cluster_t[rownames(data_to_cluster_t) %in% rownames(heatmap_data), ]
+
+annotation_data <- data.frame(Group = filtered_data$title_status)
+rownames(annotation_data) <- rownames(scaled_data)
+
+# Print the first few row names to check manually
+print(head(rownames(scaled_data)))
+print(head(rownames(annotation_data)))
+
+# Automated check for row name matching and order
+identical(rownames(scaled_data), rownames(annotation_data))
+annotation_data$Group <- as.character(annotation_data$Group)
+
+# Define colors for annotations
+ann_colors <- list(Group = c("PM" = "blue", "Other" = "red"))
+
+# Generate heatmap
+library(pheatmap)
+pheatmap(
+  as.matrix(scaled_data),
+  annotation_col = annotation_data,
+  annotation_colors = ann_colors,
+  show_rownames = TRUE,
+  show_colnames = TRUE,
+  legend = TRUE,
+  cluster_rows = TRUE,
+  cluster_cols = TRUE,
+  fontsize_row = 6,
+  fontsize_col = 6,
+  main = "Heatmap of Significant Genes Above 0.1 Importance over 5,000 Genes",
+  filename = "plots/heatmaps/ass4_randomForest.png"  
+)
+
+
 ```
 
 
