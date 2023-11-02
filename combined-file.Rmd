@@ -1529,8 +1529,127 @@ data_to_cluster <- gene_expression[most_var_5000[,1], ]
 Fill out one of the following (we will delete the extra one since there are 5)
 
 ```{r support vector machine}
+install.packages("e1071")
+install.packages("pROC")
+install.packages("ggfortify")
+install.packages("caret")
+library(caret)
+library(e1071)
+library(pROC)
+library(dplyr)
+library(ggplot2)
+library(ggfortify)
+library(gridExtra)
 
+metadata <- readr::read_tsv(metadata_file)
 
+# same metadata processing and creation of assignment1_groups as before
+metadata <- metadata %>%
+  dplyr::mutate(title_status = dplyr::case_when(
+    stringr::str_detect(refinebio_title, "PM-\\d+") ~ 1,
+    TRUE ~ 0
+  ))
+labels <- metadata$title_status
+
+df <- data.frame(t(data_to_cluster), title_status = labels)
+df <- df[sample(nrow(df)), ]
+
+set.seed(123) # for reproducibility
+
+sample_indices <- createDataPartition(df$title_status, p = 0.2, list = FALSE)
+
+train_data <- df[-sample_indices, ]
+test_data <- df[sample_indices, ]
+
+# Train the SVM model
+svm_model <- svm(title_status ~ ., data = train_data, kernel = "linear")
+
+svm_predictions <- predict(svm_model, test_data)
+
+pca <- prcomp(train_data[,-ncol(train_data)])
+train_pca <- data.frame(pca$x[,1:2])
+train_pca$title_status <- train_data$title_status
+
+# Train SVM on the two principal components
+svm_model_2D <- svm(title_status ~ ., data = train_pca, kernel = "linear")
+
+# Plotting
+grid <- expand.grid(PC1 = seq(min(train_pca$PC1), max(train_pca$PC1), length.out = 200),
+                    PC2 = seq(min(train_pca$PC2), max(train_pca$PC2), length.out = 200))
+
+# Predict with SVM
+predictions <- predict(svm_model_2D, grid, decision.values = TRUE)
+grid$decision_values <- attr(predictions, "decision.values")
+
+# Plot using ggplot
+svm_ggplot <- ggplot(data = grid, aes(x = PC1, y = PC2)) +
+  geom_contour(aes(z = decision_values)) +
+  geom_point(data=train_pca, aes(color = as.factor(title_status))) +
+  theme_minimal()
+
+# Save using ggsave
+ggsave("plots/svm_plot.png", svm_ggplot, width=8, height=6)
+
+# Extract Gene Signatures
+support_vector_indices <- svm_model$index
+
+genes_in_signature <- colnames(train_data)[support_vector_indices]
+
+# Calculate the number of genes in the SVM signature
+num_genes_in_svm_signature <- length(genes_in_signature)
+
+# Rerun svm with different number of genes
+# Initialize empty lists to store results
+auc_list <- list()
+
+# Loop through each number of genes
+data_to_cluster <- gene_expression[most_var_10000[,1], ]
+for (x in c(10, 100, 1000, 10000)) {
+  df <- data.frame(t(data_to_cluster[1:x,]), title_status = labels)
+  df <- df[sample(nrow(df)), ]
+  
+  split_indices <- createDataPartition(df$title_status, p = 0.2, list = FALSE)
+  train_data <- df[-split_indices, ]
+  test_data <- df[split_indices, ]
+    
+  svm_model <- svm(title_status ~ ., data = train_data, kernel = "linear")
+  svm_predictions <- predict(svm_model, test_data)
+  
+  df_svm_predictions <- data.frame(svm_predictions = round(svm_predictions))
+  print(table(df_svm_predictions$predictions))
+  
+  
+  roc_obj <- roc(test_data$title_status, svm_predictions)
+  auc_value <- auc(roc_obj)
+  auc_list <- append(auc_list, auc_value)
+}
+auc_list
+
+gene_coefficients <- coef(svm_model)[-1]
+sorted_genes <- names(gene_coefficients[order(abs(gene_coefficients), decreasing = TRUE)])
+
+library(pheatmap)
+library(dendextend)
+
+head(test_data)
+dim(test_data)
+
+threshold <- 0.5
+selected_data <- test_data[svm_predictions > threshold, ]
+
+# Log scale the selected data (if necessary)
+scaled <- log(selected_data + 1)
+
+annotation_data_heatmap <- data.frame(status = round(scaled$title_status))
+
+pheatmap(
+  as.matrix(scaled, rownames.force = TRUE),
+  cluster_rows = TRUE,
+  show_colnames = FALSE,  # You can set this to TRUE if you want to display column names
+  legend = TRUE, 
+  main = "Heatmap of Selected Genes (SVM)",
+  filename = "plots/heatmaps/ass4_svm.png"  # Specify the file name and format
+)
 
 ```
 
