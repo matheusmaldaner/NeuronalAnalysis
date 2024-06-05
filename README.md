@@ -52,7 +52,6 @@ Research Question: "How can the transcriptional profiles of individual neurons, 
 ### Packages
 
 * BiocManager
-* <Others>
 
 ### Installation
 
