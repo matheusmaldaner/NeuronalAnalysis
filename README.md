@@ -1,101 +1,88 @@
-<!-- PROJECT LOGO -->
-<br />
-<p align="center">
-  <h3 align="center"> Neuronal Network Modeling</h3>
+<div align="center">
 
-  <p align="center">
-    Modeling and Predicting Neuronal Network Behavior Using Gene Expression Data
-  </p>
-</p>
+<!-- Replace with your own banner/logo path -->
+<img src="banner.svg" alt="Neuronal Network Modeling Logo">
 
-<!-- TABLE OF CONTENTS -->
-<details open="open">
-  <summary>Table of Contents</summary>
-  <ol>
-    <li>
-      <a href="#about-the-project">About The Project</a>
-    </li>
-    <li>
-      <a href="#getting-started">Getting Started</a>
-      <ul>
-        <li><a href="#dependencies">Dependencies</a></li>
-        <li><a href="#packages">Packages</a></li>
-        <li><a href="#installation">Installation</a></li>
-      </ul>
-    </li>
-    <li><a href="#usage">Usage</a></li>
-    <li><a href="#roadmap">Roadmap</a></li>
-    <li><a href="#license">License</a></li>
-    <li><a href="#authors">Authors</a></li>
-    <li><a href="#acknowledgements">Acknowledgements</a></li>
-  </ol>
-</details>
+*Modeling and Predicting Neuronal Network Behavior Using Gene Expression Data*
 
-<!-- ABOUT THE PROJECT -->
-## About The Project
+<!-- Badges (edit links as needed) -->
+[![Final Report](https://img.shields.io/badge/Final%20Report-PDF-red?logo=adobeacrobatreader&logoColor=white)](FinalReport.pdf)
+![R](https://img.shields.io/badge/R-4.3.1-276DC3)
+![RStudio](https://img.shields.io/badge/RStudio-2023.06.0%2B421-75AADB)
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
-This project aims to model and predict neuronal network behavior by analyzing the gene expression of individual neurons, characterized by their anatomical and functional properties. The dataset used for this project can be found [here](https://www.refine.bio/experiments/SRP094496/correlating-anatomy-and-function-with-gene-expression-in-individual-neurons-by-combining-in-vivo-labeling-patch-clamp-and-single-cell-rna-seq).
+</div>
 
-Research Question: "How can the transcriptional profiles of individual neurons, characterized by their anatomical and functional properties, be used to model and predict neuronal network behavior in a neurosymbolic framework?"
+---
 
-<!-- GETTING STARTED -->
-## Getting Started
+### 🧠 Overview
 
-### Dependencies
+This project explores how **single-neuron gene expression profiles**, paired with anatomical and functional properties, can be used to **model and predict neuronal network behavior** in a **neurosymbolic framework**.
 
-* R 4.3.1
-* RStudio 2023.06.0+421
+**Research Question:**  
+How can the transcriptional profiles of individual neurons, characterized by their anatomical and functional properties, be used to model and predict neuronal network behavior in a neurosymbolic framework?
 
-### Packages
+**Dataset:**  
+Refine.bio experiment: *Correlating anatomy and function with gene expression in individual neurons...*  
+https://www.refine.bio/experiments/SRP094496/correlating-anatomy-and-function-with-gene-expression-in-individual-neurons-by-combining-in-vivo-labeling-patch-clamp-and-single-cell-rna-seq
 
-* BiocManager
+---
 
-### Installation
+## Quick Start
 
-1. Clone the repository to your local machine.
-2. Install the required dependencies.
-3. Download the [dataset](https://www.refine.bio/experiments/SRP094496/correlating-anatomy-and-function-with-gene-expression-in-individual-neurons-by-combining-in-vivo-labeling-patch-clamp-and-single-cell-rna-seq) and place it in the appropriate directory.
+You’ll need R/RStudio, required packages, and the dataset.
 
-<!-- USAGE EXAMPLES -->
-## Usage
+### (1) 🧰 Install Dependencies
 
-Detailed instructions on how to run the code and use the dataset will be provided.
+Make sure you have:
 
-<!-- ROADMAP -->
-## Roadmap
+- **R 4.3.1**
+- **RStudio 2023.06.0+421**
 
-1. Data Preprocessing and Exploration
-2. Feature Engineering
-3. Model Training and Evaluation
-4. Interpretation and Analysis
+### (2) 📦 Install Packages
 
-<!-- LICENSE -->
-## License
+At minimum, install `BiocManager`:
 
-Distributed under the MIT License. See `LICENSE` for more information.
+```r
+install.packages("BiocManager")
+```
 
-<!-- Authors -->
-## Authors
+(If your scripts install additional Bioconductor packages, run them after installing `BiocManager`.)
 
-Ethan Fan - [Github](https://github.com/Ethan12103)
+### (3) 📥 Get the Dataset
 
-Matheus Kunzler Maldaner - [Github](https://github.com/matheusmaldaner)
+Download the dataset from Refine.bio and place it in the directory expected by the project (e.g., a `data/` folder in the repo):
 
-Nathan Gilman - [Github](https://github.com/npgilman)
+```bash
+# example (adjust to your repo's expected structure)
+mkdir -p data
+# download manually from the link in the README and move files into ./data
+```
 
-Rama Janco - [Github](https://github.com/ramawama)
+### (4) ▶️ Run the Project
 
-<!-- ACKNOWLEDGEMENTS -->
-## Acknowledgements
+Open the project in **RStudio**, then run the main analysis script(s) (example names below—adjust to your repo):
 
-* Kiley Graim for instructing the course.
-* Pfeffer CK and Beltramo R for authoring the original research and dataset.
-* The Sequence Read Archive (SRA) for hosting the source repository.
-* refine.bio and the Childhood Cancer Data Lab (CCDL) for providing a uniformly processed and normalized version of the dataset.
-* Alex's Lemonade Stand Foundation for powering the refine.bio project.
-* Casey S. Greene, Dongbo Hu, Richard W. W. Jones, Stephanie Liu, David S. Mejia, Rob Patro, Stephen R. Piccolo, Ariel Rodriguez Romero, Hirak Sarkar, Candace L. Savonen, Jaclyn N. Taroni, William E. Vauclain, Deepashree Venkatesh Prasad, Kurt G. Wheeler for their contributions to refine.bio.
+```r
+# Example (adjust to your actual filenames)
+source("src/main.R")
+# or open an RMarkdown notebook and Knit:
+# rmarkdown::render("notebooks/analysis.Rmd")
+```
+
+## 🧩 Tech Stack
+
+| Component        | Technology |
+| --------------- | ---------- |
+| 🧪 Analysis      | R          |
+| 🧰 IDE           | RStudio    |
+| 🧬 Bio Tools     | BiocManager |
 
 
-## Thank you
 
+## 👥 Authors
 
+- Ethan Fan — [GitHub](https://github.com/Ethan12103)  
+- Matheus Kunzler Maldaner — [GitHub](https://github.com/matheusmaldaner)  
+- Nathan Gilman — [GitHub](https://github.com/npgilman)  
+- Rama Janco — [GitHub](https://github.com/ramawama)  
