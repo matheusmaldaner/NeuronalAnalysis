@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Neuronal Analysis</title>
+<meta name="description" content="Modeling and predicting neuronal network behavior from single-neuron gene expression data in Mus musculus, using R and machine learning.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><circle cx='16' cy='16' r='9' fill='none' stroke='%2310b981' stroke-width='3'/></svg>">
+<style>
+:root {
+  --bg-primary: #f5f5f7;
+  --bg-secondary: #ffffff;
+  --text-primary: #1d1d1f;
+  --text-secondary: #6e6e73;
+  --text-muted: #86868b;
+  --border: rgba(0, 0, 0, 0.08);
+  --border-hover: rgba(0, 0, 0, 0.15);
+  --accent: #10b981;
+  --accent-hover: #059669;
+  --accent-dim: rgba(16, 185, 129, 0.12);
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 12px 40px rgba(0, 0, 0, 0.12);
+  --glass-bg: rgba(255, 255, 255, 0.7);
+  --glass-border: rgba(255, 255, 255, 0.5);
+  --transition: 0.5s cubic-bezier(0.25, 0.1, 0.25, 1);
+  --transition-fast: 0.3s cubic-bezier(0.25, 0.1, 0.25, 1);
+  --figure-bg: #ffffff;
+  --figure-filter: none;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg-primary: #000000;
+    --bg-secondary: #0d0d0d;
+    --text-primary: #fafafa;
+    --text-secondary: #a3a3a3;
+    --text-muted: #737373;
+    --border: #262626;
+    --border-hover: #404040;
+    --accent: #34d399;
+    --accent-hover: #10b981;
+    --accent-dim: rgba(52, 211, 153, 0.15);
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+    --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);
+    --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.5);
+    --glass-bg: rgba(255, 255, 255, 0.05);
+    --glass-border: rgba(255, 255, 255, 0.1);
+    --figure-bg: #f7f7f8;
+  }
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  line-height: 1.65;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background:
+    radial-gradient(circle at 15% 5%, var(--accent-dim), transparent 45%),
+    radial-gradient(circle at 85% 20%, rgba(59, 130, 246, 0.10), transparent 50%);
+}
+
+.wrap { position: relative; z-index: 1; max-width: 1080px; margin: 0 auto; padding: 0 24px; }
+
+/* header */
+header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: var(--glass-bg);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border-bottom: 1px solid var(--glass-border);
+}
+.nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 24px;
+  max-width: 1080px;
+  margin: 0 auto;
+}
+.nav-title { font-size: 15px; font-weight: 600; letter-spacing: -0.01em; }
+.nav-links { display: flex; gap: 20px; }
+.nav-links a {
+  font-size: 14px;
+  color: var(--text-secondary);
+  text-decoration: none;
+  transition: color var(--transition-fast);
+}
+.nav-links a:hover { color: var(--accent); }
+
+/* hero */
+.hero { padding: 96px 0 56px; text-align: center; }
+.eyebrow {
+  display: inline-block;
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--accent);
+  border: 1px solid var(--border);
+  background: var(--glass-bg);
+  backdrop-filter: blur(12px);
+  padding: 6px 14px;
+  border-radius: 999px;
+  margin-bottom: 24px;
+}
+h1 {
+  font-size: clamp(38px, 7vw, 66px);
+  line-height: 1.05;
+  letter-spacing: -0.035em;
+  font-weight: 650;
+  margin-bottom: 20px;
+}
+.lede {
+  font-size: clamp(17px, 2.2vw, 20px);
+  color: var(--text-secondary);
+  max-width: 660px;
+  margin: 0 auto 32px;
+}
+.cta { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; }
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 11px 22px;
+  border-radius: 999px;
+  font-size: 15px;
+  font-weight: 500;
+  text-decoration: none;
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast), border-color var(--transition-fast);
+  border: 1px solid var(--border);
+  color: var(--text-primary);
+  background: var(--glass-bg);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  box-shadow: var(--shadow-sm);
+}
+.btn:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); border-color: var(--border-hover); }
+.btn-primary { background: var(--accent); border-color: transparent; color: #04120c; font-weight: 600; }
+.btn-primary:hover { background: var(--accent-hover); }
+
+/* sections */
+section { padding: 48px 0; }
+h2 {
+  font-size: clamp(24px, 3.4vw, 32px);
+  letter-spacing: -0.025em;
+  font-weight: 640;
+  margin-bottom: 10px;
+}
+.section-sub { color: var(--text-secondary); max-width: 700px; margin-bottom: 28px; }
+
+.card {
+  background: var(--glass-bg);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-md);
+  padding: 28px;
+}
+.card + .card { margin-top: 18px; }
+.card p + p { margin-top: 14px; }
+.card a { color: var(--accent); text-decoration: none; }
+.card a:hover { text-decoration: underline; }
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 18px;
+}
+.grid h3 { font-size: 16px; font-weight: 600; margin-bottom: 8px; }
+.grid p { font-size: 15px; color: var(--text-secondary); }
+
+/* chips */
+.chips { display: flex; flex-wrap: wrap; gap: 10px; }
+.chip {
+  font-size: 13.5px;
+  color: var(--text-secondary);
+  padding: 7px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--glass-bg);
+  backdrop-filter: blur(12px);
+  transition: border-color var(--transition-fast), color var(--transition-fast);
+}
+.chip:hover { color: var(--text-primary); border-color: var(--border-hover); }
+
+/* figures */
+.figures { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px; }
+figure {
+  background: var(--glass-bg);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+}
+figure:hover { transform: translateY(-3px); box-shadow: var(--shadow-lg); }
+figure a { display: block; background: var(--figure-bg); }
+figure img { display: block; width: 100%; height: auto; }
+figcaption { padding: 14px 18px 16px; border-top: 1px solid var(--border); }
+figcaption strong { display: block; font-size: 15px; font-weight: 600; margin-bottom: 3px; }
+figcaption span { font-size: 14px; color: var(--text-secondary); }
+
+/* footer */
+footer {
+  border-top: 1px solid var(--border);
+  margin-top: 40px;
+  padding: 32px 0 56px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 14px;
+}
+footer a { color: var(--accent); text-decoration: none; }
+footer a:hover { text-decoration: underline; }
+
+ul.plain { list-style: none; }
+ul.plain li { padding-left: 18px; position: relative; color: var(--text-secondary); font-size: 15px; }
+ul.plain li::before { content: ""; position: absolute; left: 0; top: 11px; width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
+</style>
+</head>
+<body>
+
+<header>
+  <nav class="nav">
+    <span class="nav-title">Neuronal Analysis</span>
+    <div class="nav-links">
+      <a href="#overview">Overview</a>
+      <a href="#pipeline">Pipeline</a>
+      <a href="#figures">Figures</a>
+      <a href="https://github.com/matheusmaldaner/NeuronalAnalysis">GitHub</a>
+    </div>
+  </nav>
+</header>
+
+<div class="wrap">
+
+  <div class="hero">
+    <span class="eyebrow">CGS4144 Bioinformatics &middot; 2023</span>
+    <h1>Modeling neuronal network behavior from gene expression</h1>
+    <p class="lede">
+      Gene analysis of the house mouse in R, using machine learning algorithms to decode neuronal
+      network patterns from single-cell RNA-seq data.
+    </p>
+    <div class="cta">
+      <a class="btn btn-primary" href="https://github.com/matheusmaldaner/NeuronalAnalysis/blob/main/FinalReport.pdf">Final report (PDF)</a>
+      <a class="btn" href="https://github.com/matheusmaldaner/NeuronalAnalysis">View on GitHub</a>
+      <a class="btn" href="#figures">Figures</a>
+    </div>
+  </div>
+
+  <section id="overview">
+    <h2>Overview</h2>
+    <p class="section-sub">
+      The project asks how the transcriptional profiles of individual neurons, characterized by their
+      anatomical and functional properties, can be used to model and predict neuronal network behavior
+      in a neurosymbolic framework.
+    </p>
+    <div class="card">
+      <p>
+        The analysis runs on a <em>Mus musculus</em> single-cell RNA-seq experiment from
+        <a href="https://www.refine.bio/experiments/SRP094496/correlating-anatomy-and-function-with-gene-expression-in-individual-neurons-by-combining-in-vivo-labeling-patch-clamp-and-single-cell-rna-seq">refine.bio (SRP094496)</a>,
+        which combines in vivo labeling, patch clamp recordings, and single-cell RNA-seq so that each
+        neuron carries both an expression profile and measured anatomical and functional properties.
+      </p>
+      <p>
+        Samples were split into two classes based on their recorded cell type, and the pipeline moves
+        from gene identifier mapping and normalization through differential expression, enrichment,
+        unsupervised clustering, and supervised classification. Every figure below comes from that
+        pipeline, which lives in the repository as <code>combined-file.Rmd</code> and
+        <code>ensembl-to-hugo.R</code>.
+      </p>
+    </div>
+  </section>
+
+  <section id="pipeline">
+    <h2>Pipeline</h2>
+    <p class="section-sub">Four stages, all implemented in R with Bioconductor tooling.</p>
+    <div class="grid">
+      <div class="card">
+        <h3>Preprocessing</h3>
+        <p>Ensembl identifiers mapped to HUGO symbols with the house mouse annotation package, log scaling, and density checks across roughly 41,000 measured variables.</p>
+      </div>
+      <div class="card">
+        <h3>Expression structure</h3>
+        <p>PCA on a DESeq2 dataset and UMAP embedding to see how the two sample classes separate, followed by differential expression and a volcano plot of the significant genes.</p>
+      </div>
+      <div class="card">
+        <h3>Enrichment and clustering</h3>
+        <p>Gene set enrichment with topGO, clusterProfiler, and gprofiler2, then k-means, hierarchical clustering, and ConsensusClusterPlus compared against each other with chi-squared tests and alluvial diagrams.</p>
+      </div>
+      <div class="card">
+        <h3>Supervised models</h3>
+        <p>SVM, logistic regression, random forest, and naive Bayes trained on the most variable genes, with gene signatures extracted per model and rerun across different gene set sizes.</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="figures">
+    <h2>Figures</h2>
+    <p class="section-sub">Selected outputs from the analysis. Click any figure to open it at full size.</p>
+
+    <div class="figures">
+      <figure>
+        <a href="figures/density_plot.png"><img src="figures/density_plot.png" alt="Density plot of log-scaled expression values"></a>
+        <figcaption><strong>Expression density</strong><span>Distribution of log-scaled expression values after preprocessing.</span></figcaption>
+      </figure>
+      <figure>
+        <a href="figures/SRP123625_pca_plot.png"><img src="figures/SRP123625_pca_plot.png" alt="PCA plot of samples"></a>
+        <figcaption><strong>Principal components</strong><span>PCA over the DESeq2 dataset, colored by sample class.</span></figcaption>
+      </figure>
+      <figure>
+        <a href="figures/UMAP_plot.png"><img src="figures/UMAP_plot.png" alt="UMAP embedding of samples"></a>
+        <figcaption><strong>UMAP embedding</strong><span>Nonlinear projection of the same samples for comparison with PCA.</span></figcaption>
+      </figure>
+      <figure>
+        <a href="figures/SRP123625_volcano_plot.png"><img src="figures/SRP123625_volcano_plot.png" alt="Volcano plot of differential expression results"></a>
+        <figcaption><strong>Differential expression</strong><span>EnhancedVolcano plot over all measured variables, labeling the strongest hits.</span></figcaption>
+      </figure>
+      <figure>
+        <a href="figures/ass1_heatmap.png"><img src="figures/ass1_heatmap.png" alt="Heatmap of significant genes"></a>
+        <figcaption><strong>Significant gene heatmap</strong><span>Z-scored expression of the genes passing the significance threshold.</span></figcaption>
+      </figure>
+      <figure>
+        <a href="figures/clust_profiler.png"><img src="figures/clust_profiler.png" alt="Gene set enrichment results"></a>
+        <figcaption><strong>Enrichment analysis</strong><span>Enriched terms recovered from the differentially expressed gene set.</span></figcaption>
+      </figure>
+      <figure>
+        <a href="figures/k_means_silhouette.png"><img src="figures/k_means_silhouette.png" alt="Average silhouette width across k values"></a>
+        <figcaption><strong>Choosing k</strong><span>Average silhouette width across candidate k-means cluster counts.</span></figcaption>
+      </figure>
+      <figure>
+        <a href="figures/CDF.png"><img src="figures/CDF.png" alt="Consensus clustering CDF curves"></a>
+        <figcaption><strong>Consensus clustering</strong><span>CDF curves from ConsensusClusterPlus used to assess cluster stability.</span></figcaption>
+      </figure>
+      <figure>
+        <a href="figures/top_5000_ccp.png"><img src="figures/top_5000_ccp.png" alt="Consensus matrix for the top 5000 genes"></a>
+        <figcaption><strong>Consensus matrix</strong><span>Consensus clustering over the 5,000 most variable genes.</span></figcaption>
+      </figure>
+      <figure>
+        <a href="figures/k_means_alluvial.png"><img src="figures/k_means_alluvial.png" alt="Alluvial diagram of k-means cluster membership"></a>
+        <figcaption><strong>K-means membership</strong><span>How sample assignments shift as the number of input genes changes.</span></figcaption>
+      </figure>
+      <figure>
+        <a href="figures/hclust_alluvial.png"><img src="figures/hclust_alluvial.png" alt="Alluvial diagram of hierarchical clustering membership"></a>
+        <figcaption><strong>Hierarchical membership</strong><span>The same comparison for hierarchical clustering.</span></figcaption>
+      </figure>
+      <figure>
+        <a href="figures/ccp_alluvial.png"><img src="figures/ccp_alluvial.png" alt="Alluvial diagram of consensus cluster membership"></a>
+        <figcaption><strong>Consensus membership</strong><span>Cluster flow for ConsensusClusterPlus across gene set sizes.</span></figcaption>
+      </figure>
+      <figure>
+        <a href="figures/svm_plot.png"><img src="figures/svm_plot.png" alt="SVM decision boundary over the first two principal components"></a>
+        <figcaption><strong>SVM decision surface</strong><span>Linear SVM trained on the first two principal components.</span></figcaption>
+      </figure>
+      <figure>
+        <a href="figures/ass4_svm.png"><img src="figures/ass4_svm.png" alt="Heatmap of the SVM gene signature"></a>
+        <figcaption><strong>SVM signature</strong><span>Genes selected by the support vector machine.</span></figcaption>
+      </figure>
+      <figure>
+        <a href="figures/ass4_logregr.png"><img src="figures/ass4_logregr.png" alt="Heatmap of the logistic regression gene signature"></a>
+        <figcaption><strong>Logistic regression signature</strong><span>Scaled expression of the genes the logistic model relies on.</span></figcaption>
+      </figure>
+      <figure>
+        <a href="figures/ass4_randomForest.png"><img src="figures/ass4_randomForest.png" alt="Heatmap of the random forest gene signature"></a>
+        <figcaption><strong>Random forest signature</strong><span>Genes ranked highest by the random forest model.</span></figcaption>
+      </figure>
+      <figure>
+        <a href="figures/ass3_heatmap1.png"><img src="figures/ass3_heatmap1.png" alt="Clustered expression heatmap with sample annotations"></a>
+        <figcaption><strong>Annotated clustering</strong><span>Expression heatmap with row and column dendrograms plus class annotations.</span></figcaption>
+      </figure>
+      <figure>
+        <a href="figures/ass3_heatmap2.png"><img src="figures/ass3_heatmap2.png" alt="Second clustered expression heatmap"></a>
+        <figcaption><strong>Annotated clustering, alternate view</strong><span>The same data under a different clustering configuration.</span></figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section>
+    <h2>Stack</h2>
+    <p class="section-sub">Everything runs in R 4.3.1 under RStudio, with Bioconductor packages installed through BiocManager.</p>
+    <div class="chips">
+      <span class="chip">R</span>
+      <span class="chip">RStudio</span>
+      <span class="chip">Bioconductor</span>
+      <span class="chip">DESeq2</span>
+      <span class="chip">EnhancedVolcano</span>
+      <span class="chip">UMAP</span>
+      <span class="chip">topGO</span>
+      <span class="chip">clusterProfiler</span>
+      <span class="chip">gprofiler2</span>
+      <span class="chip">ConsensusClusterPlus</span>
+      <span class="chip">ggalluvial</span>
+      <span class="chip">caret</span>
+      <span class="chip">e1071</span>
+      <span class="chip">randomForest</span>
+      <span class="chip">RNA-seq</span>
+    </div>
+  </section>
+
+  <section>
+    <h2>Team</h2>
+    <div class="card">
+      <ul class="plain">
+        <li>Ethan Fan</li>
+        <li>Nathan Gilman</li>
+        <li>Rama Janco</li>
+        <li>Matheus Kunzler Maldaner</li>
+      </ul>
+    </div>
+  </section>
+
+  <footer>
+    <p>Course project for CGS4144 Bioinformatics at the University of Florida, 2023.</p>
+    <p><a href="https://matheus.wiki">matheus.wiki</a> &middot; <a href="https://github.com/matheusmaldaner/NeuronalAnalysis">source on GitHub</a></p>
+  </footer>
+
+</div>
+
+</body>
+</html>
