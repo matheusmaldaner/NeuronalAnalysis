@@ -5,247 +5,365 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Neuronal Analysis</title>
 <meta name="description" content="Modeling and predicting neuronal network behavior from single-neuron gene expression data in Mus musculus, using R and machine learning.">
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><circle cx='16' cy='16' r='9' fill='none' stroke='%2310b981' stroke-width='3'/></svg>">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect x='6' y='6' width='20' height='20' fill='none' stroke='%23c2410c' stroke-width='3'/></svg>">
 <style>
 :root {
-  --bg-primary: #f5f5f7;
-  --bg-secondary: #ffffff;
-  --text-primary: #1d1d1f;
-  --text-secondary: #6e6e73;
-  --text-muted: #86868b;
-  --border: rgba(0, 0, 0, 0.08);
-  --border-hover: rgba(0, 0, 0, 0.15);
-  --accent: #10b981;
-  --accent-hover: #059669;
-  --accent-dim: rgba(16, 185, 129, 0.12);
-  --radius-md: 12px;
-  --radius-lg: 16px;
-  --radius-xl: 20px;
-  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08);
-  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.1);
-  --shadow-lg: 0 12px 40px rgba(0, 0, 0, 0.12);
-  --glass-bg: rgba(255, 255, 255, 0.7);
-  --glass-border: rgba(255, 255, 255, 0.5);
-  --transition: 0.5s cubic-bezier(0.25, 0.1, 0.25, 1);
-  --transition-fast: 0.3s cubic-bezier(0.25, 0.1, 0.25, 1);
+  --bg: #fbfbf9;
+  --surface: #ffffff;
+  --surface-alt: #f3f3f0;
+  --ink: #16161a;
+  --ink-2: #55555c;
+  --ink-3: #86868e;
+  --rule: #dededa;
+  --rule-strong: #b8b8b2;
+  --accent: #c2410c;
   --figure-bg: #ffffff;
-  --figure-filter: none;
+  --focus: #c2410c;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg-primary: #000000;
-    --bg-secondary: #0d0d0d;
-    --text-primary: #fafafa;
-    --text-secondary: #a3a3a3;
-    --text-muted: #737373;
-    --border: #262626;
-    --border-hover: #404040;
-    --accent: #34d399;
-    --accent-hover: #10b981;
-    --accent-dim: rgba(52, 211, 153, 0.15);
-    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
-    --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);
-    --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.5);
-    --glass-bg: rgba(255, 255, 255, 0.05);
-    --glass-border: rgba(255, 255, 255, 0.1);
-    --figure-bg: #f7f7f8;
+    --bg: #0c0c0d;
+    --surface: #141416;
+    --surface-alt: #1b1b1e;
+    --ink: #f2f2f0;
+    --ink-2: #a6a6a6;
+    --ink-3: #77777c;
+    --rule: #2a2a2e;
+    --rule-strong: #43434a;
+    --accent: #f97316;
+    --figure-bg: #ffffff;
+    --focus: #f97316;
   }
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
+html { scroll-behavior: smooth; scroll-padding-top: 72px; }
+
 body {
-  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  background: var(--bg-primary);
-  color: var(--text-primary);
-  line-height: 1.65;
+  font-family: "Helvetica Neue", Helvetica, Arial, "Segoe UI", Roboto, sans-serif;
+  background: var(--bg);
+  color: var(--ink);
+  line-height: 1.62;
+  font-size: 16px;
   -webkit-font-smoothing: antialiased;
-  overflow-x: hidden;
 }
 
-body::before {
-  content: "";
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  z-index: 0;
-  background:
-    radial-gradient(circle at 15% 5%, var(--accent-dim), transparent 45%),
-    radial-gradient(circle at 85% 20%, rgba(59, 130, 246, 0.10), transparent 50%);
+.mono {
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
 }
 
-.wrap { position: relative; z-index: 1; max-width: 1080px; margin: 0 auto; padding: 0 24px; }
+a { color: var(--accent); }
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+
+.wrap { max-width: 1000px; margin: 0 auto; padding: 0 28px; }
 
 /* header */
 header {
   position: sticky;
   top: 0;
-  z-index: 10;
-  background: var(--glass-bg);
-  backdrop-filter: blur(24px) saturate(180%);
-  -webkit-backdrop-filter: blur(24px) saturate(180%);
-  border-bottom: 1px solid var(--glass-border);
+  z-index: 20;
+  background: var(--bg);
+  border-bottom: 1px solid var(--rule);
 }
 .nav {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 0 28px;
+  height: 56px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
-  padding: 14px 24px;
-  max-width: 1080px;
-  margin: 0 auto;
+  gap: 20px;
 }
-.nav-title { font-size: 15px; font-weight: 600; letter-spacing: -0.01em; }
-.nav-links { display: flex; gap: 20px; }
+.nav-title {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.nav-links { display: flex; gap: 22px; }
 .nav-links a {
-  font-size: 14px;
-  color: var(--text-secondary);
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-2);
   text-decoration: none;
-  transition: color var(--transition-fast);
+  border-bottom: 1px solid transparent;
+  padding-bottom: 2px;
+  transition: color .15s linear, border-color .15s linear;
 }
-.nav-links a:hover { color: var(--accent); }
+.nav-links a:hover { color: var(--ink); border-bottom-color: var(--accent); }
 
 /* hero */
-.hero { padding: 96px 0 56px; text-align: center; }
-.eyebrow {
-  display: inline-block;
-  font-size: 12px;
-  letter-spacing: 0.12em;
+.hero { padding: 72px 0 40px; border-bottom: 1px solid var(--rule); }
+.kicker {
+  font-size: 11px;
+  letter-spacing: 0.18em;
   text-transform: uppercase;
   color: var(--accent);
-  border: 1px solid var(--border);
-  background: var(--glass-bg);
-  backdrop-filter: blur(12px);
-  padding: 6px 14px;
-  border-radius: 999px;
-  margin-bottom: 24px;
+  margin-bottom: 22px;
 }
 h1 {
-  font-size: clamp(38px, 7vw, 66px);
-  line-height: 1.05;
-  letter-spacing: -0.035em;
-  font-weight: 650;
-  margin-bottom: 20px;
+  font-size: clamp(34px, 6.2vw, 60px);
+  line-height: 1.03;
+  letter-spacing: -0.032em;
+  font-weight: 700;
+  max-width: 17ch;
+  margin-bottom: 22px;
 }
 .lede {
-  font-size: clamp(17px, 2.2vw, 20px);
-  color: var(--text-secondary);
-  max-width: 660px;
-  margin: 0 auto 32px;
+  font-size: clamp(16px, 2vw, 19px);
+  color: var(--ink-2);
+  max-width: 62ch;
+  margin-bottom: 34px;
 }
-.cta { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; }
+.cta { display: flex; flex-wrap: wrap; gap: 10px; }
 .btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 11px 22px;
-  border-radius: 999px;
-  font-size: 15px;
-  font-weight: 500;
+  display: inline-block;
+  padding: 10px 18px;
+  border: 1px solid var(--rule-strong);
+  border-radius: 4px;
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 13px;
+  letter-spacing: 0.04em;
   text-decoration: none;
-  transition: transform var(--transition-fast), box-shadow var(--transition-fast), border-color var(--transition-fast);
-  border: 1px solid var(--border);
-  color: var(--text-primary);
-  background: var(--glass-bg);
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
-  box-shadow: var(--shadow-sm);
+  transition: background .15s linear, border-color .15s linear, color .15s linear;
 }
-.btn:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); border-color: var(--border-hover); }
-.btn-primary { background: var(--accent); border-color: transparent; color: #04120c; font-weight: 600; }
-.btn-primary:hover { background: var(--accent-hover); }
+.btn:hover { border-color: var(--ink); }
+.btn-primary { background: var(--accent); border-color: var(--accent); color: #ffffff; font-weight: 600; }
+.btn-primary:hover { background: var(--ink); border-color: var(--ink); color: var(--bg); }
+
+/* meta strip */
+.meta {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  border-top: 1px solid var(--rule);
+  margin-top: 40px;
+}
+.meta div {
+  padding: 18px 20px 18px 0;
+  border-right: 1px solid var(--rule);
+}
+.meta div:last-child { border-right: none; }
+.meta dt {
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  margin-bottom: 6px;
+}
+.meta dd { font-size: 14px; color: var(--ink); }
+.meta dd a { text-decoration: none; border-bottom: 1px solid var(--rule-strong); }
 
 /* sections */
-section { padding: 48px 0; }
-h2 {
-  font-size: clamp(24px, 3.4vw, 32px);
-  letter-spacing: -0.025em;
-  font-weight: 640;
+section { padding: 64px 0; border-bottom: 1px solid var(--rule); }
+.sec-head { margin-bottom: 32px; }
+.sec-num {
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  color: var(--ink-3);
+  display: block;
   margin-bottom: 10px;
 }
-.section-sub { color: var(--text-secondary); max-width: 700px; margin-bottom: 28px; }
-
-.card {
-  background: var(--glass-bg);
-  backdrop-filter: blur(24px) saturate(180%);
-  -webkit-backdrop-filter: blur(24px) saturate(180%);
-  border: 1px solid var(--glass-border);
-  border-radius: var(--radius-xl);
-  box-shadow: var(--shadow-md);
-  padding: 28px;
+h2 {
+  font-size: clamp(23px, 3.2vw, 30px);
+  letter-spacing: -0.022em;
+  font-weight: 700;
+  margin-bottom: 10px;
 }
-.card + .card { margin-top: 18px; }
-.card p + p { margin-top: 14px; }
-.card a { color: var(--accent); text-decoration: none; }
-.card a:hover { text-decoration: underline; }
+.sec-sub { color: var(--ink-2); max-width: 68ch; font-size: 15.5px; }
 
-.grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: 18px;
-}
-.grid h3 { font-size: 16px; font-weight: 600; margin-bottom: 8px; }
-.grid p { font-size: 15px; color: var(--text-secondary); }
-
-/* chips */
-.chips { display: flex; flex-wrap: wrap; gap: 10px; }
-.chip {
+.prose { max-width: 70ch; }
+.prose p + p { margin-top: 16px; }
+.prose a { text-decoration: none; border-bottom: 1px solid var(--accent); }
+.prose code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   font-size: 13.5px;
-  color: var(--text-secondary);
-  padding: 7px 14px;
-  border-radius: 999px;
-  border: 1px solid var(--border);
-  background: var(--glass-bg);
-  backdrop-filter: blur(12px);
-  transition: border-color var(--transition-fast), color var(--transition-fast);
+  background: var(--surface-alt);
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  padding: 1px 5px;
 }
-.chip:hover { color: var(--text-primary); border-color: var(--border-hover); }
+
+/* pipeline stages */
+.stages { border-top: 1px solid var(--rule); }
+.stage {
+  display: grid;
+  grid-template-columns: 64px 1fr;
+  gap: 24px;
+  padding: 26px 0;
+  border-bottom: 1px solid var(--rule);
+}
+.stage-idx { font-size: 12px; color: var(--ink-3); letter-spacing: 0.1em; padding-top: 3px; }
+.stage h3 { font-size: 17px; font-weight: 700; margin-bottom: 6px; letter-spacing: -0.01em; }
+.stage p { color: var(--ink-2); font-size: 15px; max-width: 66ch; }
+
+/* interactive demo */
+.demo {
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+  background: var(--surface);
+  overflow: hidden;
+}
+.demo-canvas-wrap { background: var(--surface); padding: 0; }
+#kcanvas { display: block; width: 100%; height: 400px; }
+.demo-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 18px;
+  padding: 14px 18px;
+  border-top: 1px solid var(--rule);
+  background: var(--surface-alt);
+}
+.ctl { display: flex; align-items: center; gap: 10px; }
+.hint { font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-3); margin-left: auto; }
+.ctl label {
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+button.ui {
+  font-family: inherit;
+  font-size: 13px;
+  letter-spacing: 0.03em;
+  padding: 8px 16px;
+  border: 1px solid var(--rule-strong);
+  border-radius: 4px;
+  background: var(--surface);
+  color: var(--ink);
+  cursor: pointer;
+  transition: background .15s linear, border-color .15s linear, color .15s linear;
+}
+button.ui:hover { border-color: var(--ink); }
+button.ui:disabled { opacity: .45; cursor: not-allowed; }
+button.ui.primary { background: var(--accent); border-color: var(--accent); color: #ffffff; font-weight: 600; }
+button.ui.primary:hover:not(:disabled) { background: var(--ink); border-color: var(--ink); color: var(--bg); }
+
+input[type=range] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 130px;
+  height: 2px;
+  background: var(--rule-strong);
+  border-radius: 0;
+  cursor: pointer;
+}
+input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  background: var(--accent);
+  border: none;
+  cursor: pointer;
+}
+input[type=range]::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  background: var(--accent);
+  border: none;
+  cursor: pointer;
+}
+#kval { font-size: 14px; min-width: 1.2em; }
+
+.readout {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  border-top: 1px solid var(--rule);
+}
+.readout div { padding: 12px 18px; border-right: 1px solid var(--rule); }
+.readout div:last-child { border-right: none; }
+.readout dt { font-size: 10.5px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-3); }
+.readout dd { font-size: 15px; margin-top: 3px; }
+
+.note {
+  font-size: 13.5px;
+  color: var(--ink-3);
+  margin-top: 14px;
+  max-width: 76ch;
+  border-left: 2px solid var(--rule-strong);
+  padding-left: 12px;
+}
 
 /* figures */
-.figures { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px; }
+.figures {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 24px;
+}
 figure {
-  background: var(--glass-bg);
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
-  border: 1px solid var(--glass-border);
-  border-radius: var(--radius-lg);
+  border: 1px solid var(--rule);
+  border-radius: 6px;
   overflow: hidden;
-  box-shadow: var(--shadow-sm);
-  transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+  background: var(--surface);
+  transition: border-color .15s linear;
 }
-figure:hover { transform: translateY(-3px); box-shadow: var(--shadow-lg); }
-figure a { display: block; background: var(--figure-bg); }
+figure:hover { border-color: var(--rule-strong); }
+figure a { display: block; background: var(--figure-bg); border-bottom: 1px solid var(--rule); }
 figure img { display: block; width: 100%; height: auto; }
-figcaption { padding: 14px 18px 16px; border-top: 1px solid var(--border); }
-figcaption strong { display: block; font-size: 15px; font-weight: 600; margin-bottom: 3px; }
-figcaption span { font-size: 14px; color: var(--text-secondary); }
-
-/* footer */
-footer {
-  border-top: 1px solid var(--border);
-  margin-top: 40px;
-  padding: 32px 0 56px;
-  text-align: center;
-  color: var(--text-muted);
-  font-size: 14px;
+figcaption { padding: 13px 16px 15px; }
+figcaption strong { display: block; font-size: 14.5px; font-weight: 700; margin-bottom: 3px; }
+figcaption span { font-size: 13.5px; color: var(--ink-2); }
+figcaption .tag {
+  display: inline-block;
+  font-size: 10.5px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  margin-bottom: 7px;
 }
-footer a { color: var(--accent); text-decoration: none; }
-footer a:hover { text-decoration: underline; }
 
-ul.plain { list-style: none; }
-ul.plain li { padding-left: 18px; position: relative; color: var(--text-secondary); font-size: 15px; }
-ul.plain li::before { content: ""; position: absolute; left: 0; top: 11px; width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
+/* stack */
+.tags { display: flex; flex-wrap: wrap; gap: 8px; }
+.tag-item {
+  font-size: 13px;
+  color: var(--ink-2);
+  padding: 6px 12px;
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+  background: var(--surface);
+}
+
+/* team */
+.team { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); border-top: 1px solid var(--rule); }
+.team div { padding: 20px 0; border-bottom: 1px solid var(--rule); font-size: 16px; }
+
+footer {
+  padding: 40px 0 72px;
+  color: var(--ink-3);
+  font-size: 13.5px;
+}
+footer p + p { margin-top: 6px; }
+footer a { text-decoration: none; border-bottom: 1px solid var(--rule-strong); }
+
+@media (max-width: 640px) {
+  .wrap, .nav { padding-left: 20px; padding-right: 20px; }
+  .nav-links { gap: 14px; }
+  .nav-links a:nth-child(2) { display: none; }
+  .stage { grid-template-columns: 1fr; gap: 8px; }
+  #kcanvas { height: 320px; }
+  .readout div { border-right: none; border-bottom: 1px solid var(--rule); }
+  .meta div { border-right: none; border-bottom: 1px solid var(--rule); padding-right: 0; }
+  section { padding: 48px 0; }
+}
 </style>
 </head>
 <body>
 
 <header>
   <nav class="nav">
-    <span class="nav-title">Neuronal Analysis</span>
-    <div class="nav-links">
+    <span class="nav-title mono">Neuronal Analysis</span>
+    <div class="nav-links mono">
       <a href="#overview">Overview</a>
       <a href="#pipeline">Pipeline</a>
+      <a href="#demo">Demo</a>
       <a href="#figures">Figures</a>
       <a href="https://github.com/matheusmaldaner/NeuronalAnalysis">GitHub</a>
     </div>
@@ -255,7 +373,7 @@ ul.plain li::before { content: ""; position: absolute; left: 0; top: 11px; width
 <div class="wrap">
 
   <div class="hero">
-    <span class="eyebrow">CGS4144 Bioinformatics &middot; 2023</span>
+    <p class="kicker mono">CGS4144 Bioinformatics / University of Florida / 2023</p>
     <h1>Modeling neuronal network behavior from gene expression</h1>
     <p class="lede">
       Gene analysis of the house mouse in R, using machine learning algorithms to decode neuronal
@@ -264,18 +382,40 @@ ul.plain li::before { content: ""; position: absolute; left: 0; top: 11px; width
     <div class="cta">
       <a class="btn btn-primary" href="https://github.com/matheusmaldaner/NeuronalAnalysis/blob/main/FinalReport.pdf">Final report (PDF)</a>
       <a class="btn" href="https://github.com/matheusmaldaner/NeuronalAnalysis">View on GitHub</a>
-      <a class="btn" href="#figures">Figures</a>
+      <a class="btn" href="#demo">Clustering demo</a>
     </div>
+
+    <dl class="meta">
+      <div>
+        <dt class="mono">Dataset</dt>
+        <dd><a href="https://www.refine.bio/experiments/SRP094496/correlating-anatomy-and-function-with-gene-expression-in-individual-neurons-by-combining-in-vivo-labeling-patch-clamp-and-single-cell-rna-seq">refine.bio SRP094496</a></dd>
+      </div>
+      <div>
+        <dt class="mono">Organism</dt>
+        <dd><em>Mus musculus</em></dd>
+      </div>
+      <div>
+        <dt class="mono">Variables</dt>
+        <dd>~41,000 measured</dd>
+      </div>
+      <div>
+        <dt class="mono">Language</dt>
+        <dd>R 4.3.1 / Bioconductor</dd>
+      </div>
+    </dl>
   </div>
 
   <section id="overview">
-    <h2>Overview</h2>
-    <p class="section-sub">
-      The project asks how the transcriptional profiles of individual neurons, characterized by their
-      anatomical and functional properties, can be used to model and predict neuronal network behavior
-      in a neurosymbolic framework.
-    </p>
-    <div class="card">
+    <div class="sec-head">
+      <span class="sec-num mono">01 / Overview</span>
+      <h2>What the project asks</h2>
+      <p class="sec-sub">
+        How the transcriptional profiles of individual neurons, characterized by their anatomical and
+        functional properties, can be used to model and predict neuronal network behavior in a
+        neurosymbolic framework.
+      </p>
+    </div>
+    <div class="prose">
       <p>
         The analysis runs on a <em>Mus musculus</em> single-cell RNA-seq experiment from
         <a href="https://www.refine.bio/experiments/SRP094496/correlating-anatomy-and-function-with-gene-expression-in-individual-neurons-by-combining-in-vivo-labeling-patch-clamp-and-single-cell-rna-seq">refine.bio (SRP094496)</a>,
@@ -293,139 +433,206 @@ ul.plain li::before { content: ""; position: absolute; left: 0; top: 11px; width
   </section>
 
   <section id="pipeline">
-    <h2>Pipeline</h2>
-    <p class="section-sub">Four stages, all implemented in R with Bioconductor tooling.</p>
-    <div class="grid">
-      <div class="card">
-        <h3>Preprocessing</h3>
-        <p>Ensembl identifiers mapped to HUGO symbols with the house mouse annotation package, log scaling, and density checks across roughly 41,000 measured variables.</p>
+    <div class="sec-head">
+      <span class="sec-num mono">02 / Pipeline</span>
+      <h2>Four stages, all in R</h2>
+      <p class="sec-sub">Implemented with Bioconductor tooling, each stage feeding the next.</p>
+    </div>
+    <div class="stages">
+      <div class="stage">
+        <div class="stage-idx mono">01</div>
+        <div>
+          <h3>Preprocessing</h3>
+          <p>Ensembl identifiers mapped to HUGO symbols with the house mouse annotation package, log scaling, and density checks across roughly 41,000 measured variables.</p>
+        </div>
       </div>
-      <div class="card">
-        <h3>Expression structure</h3>
-        <p>PCA on a DESeq2 dataset and UMAP embedding to see how the two sample classes separate, followed by differential expression and a volcano plot of the significant genes.</p>
+      <div class="stage">
+        <div class="stage-idx mono">02</div>
+        <div>
+          <h3>Expression structure</h3>
+          <p>PCA on a DESeq2 dataset and UMAP embedding to see how the two sample classes separate, followed by differential expression and a volcano plot of the significant genes.</p>
+        </div>
       </div>
-      <div class="card">
-        <h3>Enrichment and clustering</h3>
-        <p>Gene set enrichment with topGO, clusterProfiler, and gprofiler2, then k-means, hierarchical clustering, and ConsensusClusterPlus compared against each other with chi-squared tests and alluvial diagrams.</p>
+      <div class="stage">
+        <div class="stage-idx mono">03</div>
+        <div>
+          <h3>Enrichment and clustering</h3>
+          <p>Gene set enrichment with topGO, clusterProfiler, and gprofiler2, then k-means, hierarchical clustering, and ConsensusClusterPlus compared against each other with chi-squared tests and alluvial diagrams.</p>
+        </div>
       </div>
-      <div class="card">
-        <h3>Supervised models</h3>
-        <p>SVM, logistic regression, random forest, and naive Bayes trained on the most variable genes, with gene signatures extracted per model and rerun across different gene set sizes.</p>
+      <div class="stage">
+        <div class="stage-idx mono">04</div>
+        <div>
+          <h3>Supervised models</h3>
+          <p>SVM, logistic regression, random forest, and naive Bayes trained on the most variable genes, with gene signatures extracted per model and rerun across different gene set sizes.</p>
+        </div>
       </div>
     </div>
+  </section>
+
+  <section id="demo">
+    <div class="sec-head">
+      <span class="sec-num mono">03 / Interactive</span>
+      <h2>K-means, one iteration at a time</h2>
+      <p class="sec-sub">
+        Stage three compares k-means against hierarchical and consensus clustering. This is that
+        algorithm made steppable: pick a k, then alternate between assigning every point to its
+        nearest centroid and moving each centroid to the mean of the points it captured.
+      </p>
+    </div>
+
+    <div class="demo">
+      <div class="demo-canvas-wrap">
+        <canvas id="kcanvas" aria-label="Interactive k-means clustering scatter plot"></canvas>
+      </div>
+      <div class="demo-bar">
+        <div class="ctl">
+          <label class="mono" for="kslider">Clusters k</label>
+          <input id="kslider" type="range" min="2" max="8" step="1" value="4">
+          <span id="kval" class="mono">4</span>
+        </div>
+        <div class="ctl">
+          <button id="stepbtn" class="ui primary">Step</button>
+          <button id="runbtn" class="ui">Run</button>
+          <button id="reseedbtn" class="ui">Reseed</button>
+        </div>
+        <span class="hint mono">Reseed or move k to restart</span>
+      </div>
+      <dl class="readout">
+        <div><dt class="mono">Iteration</dt><dd id="r-iter" class="mono">0</dd></div>
+        <div><dt class="mono">Next step</dt><dd id="r-phase" class="mono">assign</dd></div>
+        <div><dt class="mono">Points</dt><dd id="r-points" class="mono">240</dd></div>
+        <div><dt class="mono">Within-cluster SS</dt><dd id="r-wcss" class="mono">n/a</dd></div>
+        <div><dt class="mono">Status</dt><dd id="r-status" class="mono">ready</dd></div>
+      </dl>
+    </div>
+
+    <p class="note">
+      Illustrative demo only. The points are synthetic 2D samples generated in your browser, not the
+      SRP094496 expression data. The real analysis ran k-means over thousands of genes in
+      high-dimensional space, where the same two alternating steps apply but nothing is directly
+      plottable.
+    </p>
   </section>
 
   <section id="figures">
-    <h2>Figures</h2>
-    <p class="section-sub">Selected outputs from the analysis. Click any figure to open it at full size.</p>
+    <div class="sec-head">
+      <span class="sec-num mono">04 / Figures</span>
+      <h2>Selected outputs</h2>
+      <p class="sec-sub">Eighteen figures from the analysis. Click any figure to open it at full size.</p>
+    </div>
 
     <div class="figures">
       <figure>
-        <a href="figures/density_plot.png"><img src="figures/density_plot.png" alt="Density plot of log-scaled expression values"></a>
-        <figcaption><strong>Expression density</strong><span>Distribution of log-scaled expression values after preprocessing.</span></figcaption>
+        <a href="figures/density_plot.png"><img src="figures/density_plot.png" alt="Density plot of log-scaled expression values" loading="lazy"></a>
+        <figcaption><span class="tag mono">Preprocessing</span><strong>Expression density</strong><span>Distribution of log-scaled expression values after preprocessing.</span></figcaption>
       </figure>
       <figure>
-        <a href="figures/SRP123625_pca_plot.png"><img src="figures/SRP123625_pca_plot.png" alt="PCA plot of samples"></a>
-        <figcaption><strong>Principal components</strong><span>PCA over the DESeq2 dataset, colored by sample class.</span></figcaption>
+        <a href="figures/SRP123625_pca_plot.png"><img src="figures/SRP123625_pca_plot.png" alt="PCA plot of samples" loading="lazy"></a>
+        <figcaption><span class="tag mono">Structure</span><strong>Principal components</strong><span>PCA over the DESeq2 dataset, colored by sample class.</span></figcaption>
       </figure>
       <figure>
-        <a href="figures/UMAP_plot.png"><img src="figures/UMAP_plot.png" alt="UMAP embedding of samples"></a>
-        <figcaption><strong>UMAP embedding</strong><span>Nonlinear projection of the same samples for comparison with PCA.</span></figcaption>
+        <a href="figures/UMAP_plot.png"><img src="figures/UMAP_plot.png" alt="UMAP embedding of samples" loading="lazy"></a>
+        <figcaption><span class="tag mono">Structure</span><strong>UMAP embedding</strong><span>Nonlinear projection of the same samples for comparison with PCA.</span></figcaption>
       </figure>
       <figure>
-        <a href="figures/SRP123625_volcano_plot.png"><img src="figures/SRP123625_volcano_plot.png" alt="Volcano plot of differential expression results"></a>
-        <figcaption><strong>Differential expression</strong><span>EnhancedVolcano plot over all measured variables, labeling the strongest hits.</span></figcaption>
+        <a href="figures/SRP123625_volcano_plot.png"><img src="figures/SRP123625_volcano_plot.png" alt="Volcano plot of differential expression results" loading="lazy"></a>
+        <figcaption><span class="tag mono">Structure</span><strong>Differential expression</strong><span>EnhancedVolcano plot over all measured variables, labeling the strongest hits.</span></figcaption>
       </figure>
       <figure>
-        <a href="figures/ass1_heatmap.png"><img src="figures/ass1_heatmap.png" alt="Heatmap of significant genes"></a>
-        <figcaption><strong>Significant gene heatmap</strong><span>Z-scored expression of the genes passing the significance threshold.</span></figcaption>
+        <a href="figures/ass1_heatmap.png"><img src="figures/ass1_heatmap.png" alt="Heatmap of significant genes" loading="lazy"></a>
+        <figcaption><span class="tag mono">Structure</span><strong>Significant gene heatmap</strong><span>Z-scored expression of the genes passing the significance threshold.</span></figcaption>
       </figure>
       <figure>
-        <a href="figures/clust_profiler.png"><img src="figures/clust_profiler.png" alt="Gene set enrichment results"></a>
-        <figcaption><strong>Enrichment analysis</strong><span>Enriched terms recovered from the differentially expressed gene set.</span></figcaption>
+        <a href="figures/clust_profiler.png"><img src="figures/clust_profiler.png" alt="Gene set enrichment results" loading="lazy"></a>
+        <figcaption><span class="tag mono">Enrichment</span><strong>Enrichment analysis</strong><span>Enriched terms recovered from the differentially expressed gene set.</span></figcaption>
       </figure>
       <figure>
-        <a href="figures/k_means_silhouette.png"><img src="figures/k_means_silhouette.png" alt="Average silhouette width across k values"></a>
-        <figcaption><strong>Choosing k</strong><span>Average silhouette width across candidate k-means cluster counts.</span></figcaption>
+        <a href="figures/k_means_silhouette.png"><img src="figures/k_means_silhouette.png" alt="Average silhouette width across k values" loading="lazy"></a>
+        <figcaption><span class="tag mono">Clustering</span><strong>Choosing k</strong><span>Average silhouette width across candidate k-means cluster counts.</span></figcaption>
       </figure>
       <figure>
-        <a href="figures/CDF.png"><img src="figures/CDF.png" alt="Consensus clustering CDF curves"></a>
-        <figcaption><strong>Consensus clustering</strong><span>CDF curves from ConsensusClusterPlus used to assess cluster stability.</span></figcaption>
+        <a href="figures/CDF.png"><img src="figures/CDF.png" alt="Consensus clustering CDF curves" loading="lazy"></a>
+        <figcaption><span class="tag mono">Clustering</span><strong>Consensus clustering</strong><span>CDF curves from ConsensusClusterPlus used to assess cluster stability.</span></figcaption>
       </figure>
       <figure>
-        <a href="figures/top_5000_ccp.png"><img src="figures/top_5000_ccp.png" alt="Consensus matrix for the top 5000 genes"></a>
-        <figcaption><strong>Consensus matrix</strong><span>Consensus clustering over the 5,000 most variable genes.</span></figcaption>
+        <a href="figures/top_5000_ccp.png"><img src="figures/top_5000_ccp.png" alt="Consensus matrix for the top 5000 genes" loading="lazy"></a>
+        <figcaption><span class="tag mono">Clustering</span><strong>Consensus matrix</strong><span>Consensus clustering over the 5,000 most variable genes.</span></figcaption>
       </figure>
       <figure>
-        <a href="figures/k_means_alluvial.png"><img src="figures/k_means_alluvial.png" alt="Alluvial diagram of k-means cluster membership"></a>
-        <figcaption><strong>K-means membership</strong><span>How sample assignments shift as the number of input genes changes.</span></figcaption>
+        <a href="figures/k_means_alluvial.png"><img src="figures/k_means_alluvial.png" alt="Alluvial diagram of k-means cluster membership" loading="lazy"></a>
+        <figcaption><span class="tag mono">Clustering</span><strong>K-means membership</strong><span>How sample assignments shift as the number of input genes changes.</span></figcaption>
       </figure>
       <figure>
-        <a href="figures/hclust_alluvial.png"><img src="figures/hclust_alluvial.png" alt="Alluvial diagram of hierarchical clustering membership"></a>
-        <figcaption><strong>Hierarchical membership</strong><span>The same comparison for hierarchical clustering.</span></figcaption>
+        <a href="figures/hclust_alluvial.png"><img src="figures/hclust_alluvial.png" alt="Alluvial diagram of hierarchical clustering membership" loading="lazy"></a>
+        <figcaption><span class="tag mono">Clustering</span><strong>Hierarchical membership</strong><span>The same comparison for hierarchical clustering.</span></figcaption>
       </figure>
       <figure>
-        <a href="figures/ccp_alluvial.png"><img src="figures/ccp_alluvial.png" alt="Alluvial diagram of consensus cluster membership"></a>
-        <figcaption><strong>Consensus membership</strong><span>Cluster flow for ConsensusClusterPlus across gene set sizes.</span></figcaption>
+        <a href="figures/ccp_alluvial.png"><img src="figures/ccp_alluvial.png" alt="Alluvial diagram of consensus cluster membership" loading="lazy"></a>
+        <figcaption><span class="tag mono">Clustering</span><strong>Consensus membership</strong><span>Cluster flow for ConsensusClusterPlus across gene set sizes.</span></figcaption>
       </figure>
       <figure>
-        <a href="figures/svm_plot.png"><img src="figures/svm_plot.png" alt="SVM decision boundary over the first two principal components"></a>
-        <figcaption><strong>SVM decision surface</strong><span>Linear SVM trained on the first two principal components.</span></figcaption>
+        <a href="figures/svm_plot.png"><img src="figures/svm_plot.png" alt="SVM decision boundary over the first two principal components" loading="lazy"></a>
+        <figcaption><span class="tag mono">Supervised</span><strong>SVM decision surface</strong><span>Linear SVM trained on the first two principal components.</span></figcaption>
       </figure>
       <figure>
-        <a href="figures/ass4_svm.png"><img src="figures/ass4_svm.png" alt="Heatmap of the SVM gene signature"></a>
-        <figcaption><strong>SVM signature</strong><span>Genes selected by the support vector machine.</span></figcaption>
+        <a href="figures/ass4_svm.png"><img src="figures/ass4_svm.png" alt="Heatmap of the SVM gene signature" loading="lazy"></a>
+        <figcaption><span class="tag mono">Supervised</span><strong>SVM signature</strong><span>Genes selected by the support vector machine.</span></figcaption>
       </figure>
       <figure>
-        <a href="figures/ass4_logregr.png"><img src="figures/ass4_logregr.png" alt="Heatmap of the logistic regression gene signature"></a>
-        <figcaption><strong>Logistic regression signature</strong><span>Scaled expression of the genes the logistic model relies on.</span></figcaption>
+        <a href="figures/ass4_logregr.png"><img src="figures/ass4_logregr.png" alt="Heatmap of the logistic regression gene signature" loading="lazy"></a>
+        <figcaption><span class="tag mono">Supervised</span><strong>Logistic regression signature</strong><span>Scaled expression of the genes the logistic model relies on.</span></figcaption>
       </figure>
       <figure>
-        <a href="figures/ass4_randomForest.png"><img src="figures/ass4_randomForest.png" alt="Heatmap of the random forest gene signature"></a>
-        <figcaption><strong>Random forest signature</strong><span>Genes ranked highest by the random forest model.</span></figcaption>
+        <a href="figures/ass4_randomForest.png"><img src="figures/ass4_randomForest.png" alt="Heatmap of the random forest gene signature" loading="lazy"></a>
+        <figcaption><span class="tag mono">Supervised</span><strong>Random forest signature</strong><span>Genes ranked highest by the random forest model.</span></figcaption>
       </figure>
       <figure>
-        <a href="figures/ass3_heatmap1.png"><img src="figures/ass3_heatmap1.png" alt="Clustered expression heatmap with sample annotations"></a>
-        <figcaption><strong>Annotated clustering</strong><span>Expression heatmap with row and column dendrograms plus class annotations.</span></figcaption>
+        <a href="figures/ass3_heatmap1.png"><img src="figures/ass3_heatmap1.png" alt="Clustered expression heatmap with sample annotations" loading="lazy"></a>
+        <figcaption><span class="tag mono">Clustering</span><strong>Annotated clustering</strong><span>Expression heatmap with row and column dendrograms plus class annotations.</span></figcaption>
       </figure>
       <figure>
-        <a href="figures/ass3_heatmap2.png"><img src="figures/ass3_heatmap2.png" alt="Second clustered expression heatmap"></a>
-        <figcaption><strong>Annotated clustering, alternate view</strong><span>The same data under a different clustering configuration.</span></figcaption>
+        <a href="figures/ass3_heatmap2.png"><img src="figures/ass3_heatmap2.png" alt="Second clustered expression heatmap" loading="lazy"></a>
+        <figcaption><span class="tag mono">Clustering</span><strong>Annotated clustering, alternate view</strong><span>The same data under a different clustering configuration.</span></figcaption>
       </figure>
     </div>
   </section>
 
   <section>
-    <h2>Stack</h2>
-    <p class="section-sub">Everything runs in R 4.3.1 under RStudio, with Bioconductor packages installed through BiocManager.</p>
-    <div class="chips">
-      <span class="chip">R</span>
-      <span class="chip">RStudio</span>
-      <span class="chip">Bioconductor</span>
-      <span class="chip">DESeq2</span>
-      <span class="chip">EnhancedVolcano</span>
-      <span class="chip">UMAP</span>
-      <span class="chip">topGO</span>
-      <span class="chip">clusterProfiler</span>
-      <span class="chip">gprofiler2</span>
-      <span class="chip">ConsensusClusterPlus</span>
-      <span class="chip">ggalluvial</span>
-      <span class="chip">caret</span>
-      <span class="chip">e1071</span>
-      <span class="chip">randomForest</span>
-      <span class="chip">RNA-seq</span>
+    <div class="sec-head">
+      <span class="sec-num mono">05 / Stack</span>
+      <h2>Tooling</h2>
+      <p class="sec-sub">Everything runs in R 4.3.1 under RStudio, with Bioconductor packages installed through BiocManager.</p>
+    </div>
+    <div class="tags">
+      <span class="tag-item">R</span>
+      <span class="tag-item">RStudio</span>
+      <span class="tag-item">Bioconductor</span>
+      <span class="tag-item">DESeq2</span>
+      <span class="tag-item">EnhancedVolcano</span>
+      <span class="tag-item">UMAP</span>
+      <span class="tag-item">topGO</span>
+      <span class="tag-item">clusterProfiler</span>
+      <span class="tag-item">gprofiler2</span>
+      <span class="tag-item">ConsensusClusterPlus</span>
+      <span class="tag-item">ggalluvial</span>
+      <span class="tag-item">caret</span>
+      <span class="tag-item">e1071</span>
+      <span class="tag-item">randomForest</span>
+      <span class="tag-item">RNA-seq</span>
     </div>
   </section>
 
   <section>
-    <h2>Team</h2>
-    <div class="card">
-      <ul class="plain">
-        <li>Ethan Fan</li>
-        <li>Nathan Gilman</li>
-        <li>Rama Janco</li>
-        <li>Matheus Kunzler Maldaner</li>
-      </ul>
+    <div class="sec-head">
+      <span class="sec-num mono">06 / Team</span>
+      <h2>Contributors</h2>
+    </div>
+    <div class="team">
+      <div>Ethan Fan</div>
+      <div>Nathan Gilman</div>
+      <div>Rama Janco</div>
+      <div>Matheus Kunzler Maldaner</div>
     </div>
   </section>
 
@@ -435,6 +642,307 @@ ul.plain li::before { content: ""; position: absolute; left: 0; top: 11px; width
   </footer>
 
 </div>
+
+<script>
+(function () {
+  var canvas = document.getElementById("kcanvas");
+  if (!canvas || !canvas.getContext) return;
+  var ctx = canvas.getContext("2d");
+
+  var PALETTE = ["#e4572e", "#2d7dd2", "#17a398", "#8e44ad", "#d1a827", "#547aa5", "#9b2226", "#4c9f70"];
+  var N = 240;
+  var PAD = 26;
+
+  var state = {
+    k: 4,
+    points: [],
+    centroids: [],
+    phase: "assign",
+    iter: 0,
+    assigned: false,
+    converged: false,
+    running: false,
+    anim: null
+  };
+
+  var els = {
+    slider: document.getElementById("kslider"),
+    kval: document.getElementById("kval"),
+    step: document.getElementById("stepbtn"),
+    run: document.getElementById("runbtn"),
+    reseed: document.getElementById("reseedbtn"),
+    iter: document.getElementById("r-iter"),
+    phase: document.getElementById("r-phase"),
+    points: document.getElementById("r-points"),
+    wcss: document.getElementById("r-wcss"),
+    status: document.getElementById("r-status")
+  };
+
+  function css(name) {
+    return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  }
+
+  // box-muller normal sample
+  function gauss() {
+    var u = 1 - Math.random(), v = Math.random();
+    return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+  }
+
+  function clamp01(x) { return x < 0.02 ? 0.02 : x > 0.98 ? 0.98 : x; }
+
+  // generates synthetic blobs in normalized 0..1 space
+  function seedPoints() {
+    var blobs = 3 + Math.floor(Math.random() * 3);
+    var centers = [];
+    for (var b = 0; b < blobs; b++) {
+      centers.push({ x: 0.15 + Math.random() * 0.7, y: 0.15 + Math.random() * 0.7, s: 0.045 + Math.random() * 0.055 });
+    }
+    var pts = [];
+    for (var i = 0; i < N; i++) {
+      var c = centers[i % blobs];
+      pts.push({ x: clamp01(c.x + gauss() * c.s), y: clamp01(c.y + gauss() * c.s), c: -1 });
+    }
+    state.points = pts;
+  }
+
+  function seedCentroids() {
+    // forgy initialization: pick k distinct points
+    var idx = [], used = {};
+    while (idx.length < state.k) {
+      var r = Math.floor(Math.random() * state.points.length);
+      if (!used[r]) { used[r] = 1; idx.push(r); }
+    }
+    state.centroids = idx.map(function (i) {
+      return { x: state.points[i].x, y: state.points[i].y, dx: state.points[i].x, dy: state.points[i].y };
+    });
+    for (var j = 0; j < state.points.length; j++) state.points[j].c = -1;
+    state.phase = "assign";
+    state.iter = 0;
+    state.assigned = false;
+    state.converged = false;
+  }
+
+  function wcss() {
+    if (!state.assigned) return null;
+    var s = 0;
+    for (var i = 0; i < state.points.length; i++) {
+      var p = state.points[i];
+      if (p.c < 0) continue;
+      var c = state.centroids[p.c];
+      s += (p.x - c.x) * (p.x - c.x) + (p.y - c.y) * (p.y - c.y);
+    }
+    return s;
+  }
+
+  function assign() {
+    for (var i = 0; i < state.points.length; i++) {
+      var p = state.points[i], best = 0, bd = Infinity;
+      for (var j = 0; j < state.centroids.length; j++) {
+        var c = state.centroids[j];
+        var d = (p.x - c.x) * (p.x - c.x) + (p.y - c.y) * (p.y - c.y);
+        if (d < bd) { bd = d; best = j; }
+      }
+      p.c = best;
+    }
+    state.assigned = true;
+  }
+
+  function updateTargets() {
+    var moved = 0;
+    for (var j = 0; j < state.centroids.length; j++) {
+      var sx = 0, sy = 0, n = 0;
+      for (var i = 0; i < state.points.length; i++) {
+        if (state.points[i].c === j) { sx += state.points[i].x; sy += state.points[i].y; n++; }
+      }
+      var c = state.centroids[j];
+      if (n === 0) { c.dx = c.x; c.dy = c.y; continue; }
+      c.dx = sx / n; c.dy = sy / n;
+      moved += Math.abs(c.dx - c.x) + Math.abs(c.dy - c.y);
+    }
+    return moved;
+  }
+
+  function animateCentroids(done) {
+    var from = state.centroids.map(function (c) { return { x: c.x, y: c.y }; });
+    var start = null, dur = 420;
+    function frame(ts) {
+      if (start === null) start = ts;
+      var t = Math.min(1, (ts - start) / dur);
+      var e = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+      for (var j = 0; j < state.centroids.length; j++) {
+        state.centroids[j].x = from[j].x + (state.centroids[j].dx - from[j].x) * e;
+        state.centroids[j].y = from[j].y + (state.centroids[j].dy - from[j].y) * e;
+      }
+      draw();
+      if (t < 1) { state.anim = requestAnimationFrame(frame); }
+      else { state.anim = null; done && done(); }
+    }
+    state.anim = requestAnimationFrame(frame);
+  }
+
+  function step() {
+    if (state.anim || state.converged) return;
+    if (state.phase === "assign") {
+      assign();
+      state.phase = "update";
+      draw();
+      sync();
+      if (state.running) setTimeout(function () { if (state.running) step(); }, 480);
+    } else {
+      var moved = updateTargets();
+      state.phase = "assign";
+      state.iter++;
+      animateCentroids(function () {
+        if (moved < 0.0008) {
+          state.converged = true;
+          state.running = false;
+        }
+        sync();
+        if (state.running && !state.converged) setTimeout(function () { if (state.running) step(); }, 260);
+      });
+      sync();
+    }
+  }
+
+  function sync() {
+    els.iter.textContent = String(state.iter);
+    els.phase.textContent = state.converged ? "done" : state.phase;
+    els.points.textContent = String(state.points.length);
+    var w = wcss();
+    els.wcss.textContent = w === null ? "n/a" : w.toFixed(3);
+    els.status.textContent = state.converged ? "converged" : state.running ? "running" : state.iter === 0 && !state.assigned ? "ready" : "iterating";
+    els.step.disabled = state.converged;
+    els.run.textContent = state.running ? "Pause" : "Run";
+    els.run.disabled = state.converged;
+  }
+
+  function resize() {
+    var rect = canvas.getBoundingClientRect();
+    var dpr = window.devicePixelRatio || 1;
+    canvas.width = Math.max(1, Math.round(rect.width * dpr));
+    canvas.height = Math.max(1, Math.round(rect.height * dpr));
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    draw();
+  }
+
+  function px(p) {
+    var rect = canvas.getBoundingClientRect();
+    return {
+      x: PAD + p.x * (rect.width - 2 * PAD),
+      y: PAD + p.y * (rect.height - 2 * PAD)
+    };
+  }
+
+  function draw() {
+    var rect = canvas.getBoundingClientRect();
+    var w = rect.width, h = rect.height;
+    ctx.clearRect(0, 0, w, h);
+
+    var surface = css("--surface") || "#ffffff";
+    var rule = css("--rule") || "#dddddd";
+    var ink3 = css("--ink-3") || "#888888";
+
+    ctx.fillStyle = surface;
+    ctx.fillRect(0, 0, w, h);
+
+    // hairline grid
+    ctx.strokeStyle = rule;
+    ctx.lineWidth = 1;
+    for (var i = 0; i <= 8; i++) {
+      var gx = Math.round(PAD + (i / 8) * (w - 2 * PAD)) + 0.5;
+      var gy = Math.round(PAD + (i / 8) * (h - 2 * PAD)) + 0.5;
+      ctx.beginPath(); ctx.moveTo(gx, PAD); ctx.lineTo(gx, h - PAD); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(PAD, gy); ctx.lineTo(w - PAD, gy); ctx.stroke();
+    }
+
+    // membership spokes
+    if (state.assigned) {
+      ctx.lineWidth = 1;
+      for (var m = 0; m < state.points.length; m++) {
+        var p = state.points[m];
+        if (p.c < 0) continue;
+        var a = px(p), b = px(state.centroids[p.c]);
+        ctx.strokeStyle = hexAlpha(PALETTE[p.c % PALETTE.length], 0.18);
+        ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+      }
+    }
+
+    // points
+    for (var n = 0; n < state.points.length; n++) {
+      var pt = state.points[n], q = px(pt);
+      ctx.fillStyle = pt.c < 0 ? hexAlpha(ink3, 0.55) : PALETTE[pt.c % PALETTE.length];
+      ctx.beginPath();
+      ctx.arc(q.x, q.y, 3, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // centroids as squares with crosshair
+    for (var j = 0; j < state.centroids.length; j++) {
+      var cp = px(state.centroids[j]);
+      var col = PALETTE[j % PALETTE.length];
+      ctx.fillStyle = surface;
+      ctx.strokeStyle = col;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.rect(Math.round(cp.x) - 6.5, Math.round(cp.y) - 6.5, 13, 13);
+      ctx.fill();
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(cp.x - 3, cp.y); ctx.lineTo(cp.x + 3, cp.y);
+      ctx.moveTo(cp.x, cp.y - 3); ctx.lineTo(cp.x, cp.y + 3);
+      ctx.stroke();
+    }
+
+    // frame
+    ctx.strokeStyle = rule;
+    ctx.lineWidth = 1;
+    ctx.strokeRect(PAD + 0.5, PAD + 0.5, w - 2 * PAD - 1, h - 2 * PAD - 1);
+  }
+
+  function hexAlpha(hex, a) {
+    hex = (hex || "#888888").trim();
+    if (hex.charAt(0) !== "#" || hex.length < 7) return "rgba(136,136,136," + a + ")";
+    var r = parseInt(hex.substr(1, 2), 16);
+    var g = parseInt(hex.substr(3, 2), 16);
+    var b = parseInt(hex.substr(5, 2), 16);
+    return "rgba(" + r + "," + g + "," + b + "," + a + ")";
+  }
+
+  function reset(newPoints) {
+    if (state.anim) { cancelAnimationFrame(state.anim); state.anim = null; }
+    state.running = false;
+    if (newPoints) seedPoints();
+    seedCentroids();
+    draw();
+    sync();
+  }
+
+  els.slider.addEventListener("input", function () {
+    state.k = parseInt(els.slider.value, 10);
+    els.kval.textContent = String(state.k);
+    reset(false);
+  });
+  els.step.addEventListener("click", function () { state.running = false; step(); sync(); });
+  els.reseed.addEventListener("click", function () { reset(true); });
+  els.run.addEventListener("click", function () {
+    if (state.converged) return;
+    state.running = !state.running;
+    sync();
+    if (state.running) step();
+  });
+
+  window.addEventListener("resize", resize);
+  if (window.matchMedia) {
+    var mq = window.matchMedia("(prefers-color-scheme: dark)");
+    if (mq.addEventListener) mq.addEventListener("change", draw);
+  }
+
+  seedPoints();
+  seedCentroids();
+  resize();
+  sync();
+})();
+</script>
 
 </body>
 </html>
