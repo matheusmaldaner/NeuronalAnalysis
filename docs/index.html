@@ -5,353 +5,437 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Neuronal Analysis</title>
 <meta name="description" content="Modeling and predicting neuronal network behavior from single-neuron gene expression data in Mus musculus, using R and machine learning.">
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect x='6' y='6' width='20' height='20' fill='none' stroke='%23c2410c' stroke-width='3'/></svg>">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect x='6' y='6' width='20' height='20' fill='none' stroke='%2310b981' stroke-width='3'/></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
 <style>
 :root {
-  --bg: #fbfbf9;
-  --surface: #ffffff;
-  --surface-alt: #f3f3f0;
-  --ink: #16161a;
-  --ink-2: #55555c;
-  --ink-3: #86868e;
-  --rule: #dededa;
-  --rule-strong: #b8b8b2;
-  --accent: #c2410c;
+  --color-bg: #fafafa;
+  --color-surface: #ffffff;
+  --color-bg-alt: #f0f2f5;
+  --color-text: #1a1a1a;
+  --color-text-muted: #4b5563;
+  --color-text-faint: #6b7280;
+  --color-border: #e0e0e0;
+  --color-border-strong: #cbd0d6;
+  --color-primary: #10b981;
+  --color-primary-hover: #059666;
+  --color-primary-depth: #047852;
+  --color-warning: #f97316;
+  --color-danger: #ef4444;
+  --color-tint: rgba(16, 185, 129, 0.12);
+  --btn-depth: #d1d5db;
   --figure-bg: #ffffff;
-  --focus: #c2410c;
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.07);
+  --radius: 8px;
+  --radius-sm: 4px;
+  --transition: 150ms ease;
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'SF Mono', 'Fira Code', Consolas, monospace;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #0c0c0d;
-    --surface: #141416;
-    --surface-alt: #1b1b1e;
-    --ink: #f2f2f0;
-    --ink-2: #a6a6a6;
-    --ink-3: #77777c;
-    --rule: #2a2a2e;
-    --rule-strong: #43434a;
-    --accent: #f97316;
+    --color-bg: #111114;
+    --color-surface: #1c1c20;
+    --color-bg-alt: #18181c;
+    --color-text: #e8e8ec;
+    --color-text-muted: #b4b4b8;
+    --color-text-faint: #8b8b92;
+    --color-border: #333338;
+    --color-border-strong: #4a4a52;
+    --color-primary: #10b981;
+    --color-primary-hover: #34d39e;
+    --color-primary-depth: #047852;
+    --color-tint: rgba(16, 185, 129, 0.14);
+    --btn-depth: #000000;
     --figure-bg: #ffffff;
-    --focus: #f97316;
+    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.4);
+    --shadow-md: 0 4px 8px rgba(0, 0, 0, 0.5);
   }
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
-html { scroll-behavior: smooth; scroll-padding-top: 72px; }
+html { scroll-behavior: smooth; scroll-padding-top: 80px; }
 
 body {
-  font-family: "Helvetica Neue", Helvetica, Arial, "Segoe UI", Roboto, sans-serif;
-  background: var(--bg);
-  color: var(--ink);
-  line-height: 1.62;
+  font-family: var(--font-sans);
+  background: var(--color-bg);
+  color: var(--color-text);
+  line-height: 1.65;
   font-size: 16px;
   -webkit-font-smoothing: antialiased;
 }
 
-.mono {
-  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
-}
+.mono { font-family: var(--font-mono); }
 
-a { color: var(--accent); }
-:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+a { color: var(--color-primary); }
+:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
 
-.wrap { max-width: 1000px; margin: 0 auto; padding: 0 28px; }
+.wrap { max-width: 1080px; margin: 0 auto; padding: 0 32px; }
 
 /* header */
 header {
   position: sticky;
   top: 0;
   z-index: 20;
-  background: var(--bg);
-  border-bottom: 1px solid var(--rule);
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
 }
 .nav {
-  max-width: 1000px;
+  max-width: 1080px;
   margin: 0 auto;
-  padding: 0 28px;
-  height: 56px;
+  padding: 0 32px;
+  height: 62px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 20px;
 }
 .nav-title {
-  font-size: 13px;
+  font-size: 15px;
   font-weight: 700;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
+  letter-spacing: -0.01em;
 }
 .nav-links { display: flex; gap: 22px; }
 .nav-links a {
-  font-size: 12px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--ink-2);
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--color-text-muted);
   text-decoration: none;
-  border-bottom: 1px solid transparent;
-  padding-bottom: 2px;
-  transition: color .15s linear, border-color .15s linear;
+  transition: color var(--transition);
 }
-.nav-links a:hover { color: var(--ink); border-bottom-color: var(--accent); }
+.nav-links a:hover { color: var(--color-text); }
 
 /* hero */
-.hero { padding: 72px 0 40px; border-bottom: 1px solid var(--rule); }
+.hero { padding: 76px 0 48px; border-bottom: 1px solid var(--color-border); }
 .kicker {
-  font-size: 11px;
-  letter-spacing: 0.18em;
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: var(--accent);
-  margin-bottom: 22px;
+  color: var(--color-primary);
+  margin-bottom: 20px;
 }
 h1 {
-  font-size: clamp(34px, 6.2vw, 60px);
-  line-height: 1.03;
-  letter-spacing: -0.032em;
-  font-weight: 700;
-  max-width: 17ch;
-  margin-bottom: 22px;
+  font-size: clamp(2.2rem, 5.4vw, 3.2rem);
+  line-height: 1.08;
+  letter-spacing: -0.02em;
+  font-weight: 800;
+  max-width: 18ch;
+  margin-bottom: 20px;
 }
 .lede {
-  font-size: clamp(16px, 2vw, 19px);
-  color: var(--ink-2);
-  max-width: 62ch;
-  margin-bottom: 34px;
+  font-size: clamp(1rem, 1.6vw, 1.15rem);
+  color: var(--color-text-muted);
+  max-width: 64ch;
+  margin-bottom: 32px;
 }
-.cta { display: flex; flex-wrap: wrap; gap: 10px; }
+.cta { display: flex; flex-wrap: wrap; gap: 12px; }
 .btn {
   display: inline-block;
-  padding: 10px 18px;
-  border: 1px solid var(--rule-strong);
-  border-radius: 4px;
-  background: var(--surface);
-  color: var(--ink);
-  font-size: 13px;
-  letter-spacing: 0.04em;
+  padding: 0.65rem 1.25rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-size: 0.95rem;
+  font-weight: 600;
   text-decoration: none;
-  transition: background .15s linear, border-color .15s linear, color .15s linear;
+  box-shadow: 0 3px 0 0 var(--btn-depth);
+  transition: transform .08s ease, background var(--transition), color var(--transition);
 }
-.btn:hover { border-color: var(--ink); }
-.btn-primary { background: var(--accent); border-color: var(--accent); color: #ffffff; font-weight: 600; }
-.btn-primary:hover { background: var(--ink); border-color: var(--ink); color: var(--bg); }
+.btn:active { transform: translateY(2px); box-shadow: 0 1px 0 0 var(--btn-depth); }
+.btn-primary {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: #ffffff;
+  box-shadow: 0 3px 0 0 var(--color-primary-depth);
+}
+.btn-primary:hover { background: var(--color-primary-hover); border-color: var(--color-primary-hover); }
+.btn-primary:active { box-shadow: 0 1px 0 0 var(--color-primary-depth); }
 
 /* meta strip */
 .meta {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  border-top: 1px solid var(--rule);
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 12px;
   margin-top: 40px;
 }
 .meta div {
-  padding: 18px 20px 18px 0;
-  border-right: 1px solid var(--rule);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+  padding: 1rem 1.15rem;
 }
-.meta div:last-child { border-right: none; }
 .meta dt {
-  font-size: 11px;
-  letter-spacing: 0.14em;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--ink-3);
+  color: var(--color-primary);
   margin-bottom: 6px;
 }
-.meta dd { font-size: 14px; color: var(--ink); }
-.meta dd a { text-decoration: none; border-bottom: 1px solid var(--rule-strong); }
+.meta dd { font-size: 0.95rem; color: var(--color-text); }
+.meta dd a { text-decoration: none; }
+.meta dd a:hover { text-decoration: underline; }
 
 /* sections */
-section { padding: 64px 0; border-bottom: 1px solid var(--rule); }
-.sec-head { margin-bottom: 32px; }
+section { padding: 72px 0; border-bottom: 1px solid var(--color-border); }
+.sec-head { margin-bottom: 36px; }
 .sec-num {
-  font-size: 11px;
-  letter-spacing: 0.2em;
-  color: var(--ink-3);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-primary);
   display: block;
   margin-bottom: 10px;
 }
 h2 {
-  font-size: clamp(23px, 3.2vw, 30px);
-  letter-spacing: -0.022em;
+  font-size: clamp(1.4rem, 2.8vw, 1.7rem);
+  letter-spacing: -0.02em;
   font-weight: 700;
-  margin-bottom: 10px;
+  margin-bottom: 12px;
 }
-.sec-sub { color: var(--ink-2); max-width: 68ch; font-size: 15.5px; }
+.sec-sub { color: var(--color-text-muted); max-width: 68ch; font-size: 1rem; }
 
-.prose { max-width: 70ch; }
+.prose { max-width: 70ch; color: var(--color-text-muted); }
 .prose p + p { margin-top: 16px; }
-.prose a { text-decoration: none; border-bottom: 1px solid var(--accent); }
+.prose a { text-decoration: none; font-weight: 500; }
+.prose a:hover { text-decoration: underline; }
 .prose code {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 13.5px;
-  background: var(--surface-alt);
-  border: 1px solid var(--rule);
-  border-radius: 3px;
+  font-family: var(--font-mono);
+  font-size: 0.86rem;
+  background: var(--color-bg-alt);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
   padding: 1px 5px;
+  color: var(--color-text);
 }
 
 /* pipeline stages */
-.stages { border-top: 1px solid var(--rule); }
-.stage {
+.stages {
   display: grid;
-  grid-template-columns: 64px 1fr;
-  gap: 24px;
-  padding: 26px 0;
-  border-bottom: 1px solid var(--rule);
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 16px;
 }
-.stage-idx { font-size: 12px; color: var(--ink-3); letter-spacing: 0.1em; padding-top: 3px; }
-.stage h3 { font-size: 17px; font-weight: 700; margin-bottom: 6px; letter-spacing: -0.01em; }
-.stage p { color: var(--ink-2); font-size: 15px; max-width: 66ch; }
+.stage {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+  padding: 1.4rem;
+  transition: box-shadow var(--transition), transform var(--transition);
+}
+.stage:hover { box-shadow: var(--shadow-md); transform: translateY(-2px); }
+.stage-idx {
+  display: inline-block;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: var(--color-primary);
+  background: var(--color-tint);
+  border-radius: var(--radius-sm);
+  padding: 2px 7px;
+  margin-bottom: 10px;
+}
+.stage h3 { font-size: 1.05rem; font-weight: 700; margin-bottom: 8px; letter-spacing: -0.01em; }
+.stage p { color: var(--color-text-muted); font-size: 0.95rem; }
 
 /* interactive demo */
 .demo {
-  border: 1px solid var(--rule);
-  border-radius: 8px;
-  background: var(--surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-sm);
   overflow: hidden;
 }
-.demo-canvas-wrap { background: var(--surface); padding: 0; }
+.demo-canvas-wrap { background: var(--color-surface); padding: 0; }
 #kcanvas { display: block; width: 100%; height: 400px; }
 .demo-bar {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 18px;
-  padding: 14px 18px;
-  border-top: 1px solid var(--rule);
-  background: var(--surface-alt);
+  padding: 1rem 1.25rem;
+  border-top: 1px solid var(--color-border);
+  background: var(--color-bg-alt);
 }
 .ctl { display: flex; align-items: center; gap: 10px; }
-.hint { font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-3); margin-left: auto; }
+.hint { font-size: 0.78rem; color: var(--color-text-faint); margin-left: auto; }
 .ctl label {
-  font-size: 11px;
-  letter-spacing: 0.14em;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--ink-3);
+  color: var(--color-text-muted);
 }
 button.ui {
   font-family: inherit;
-  font-size: 13px;
-  letter-spacing: 0.03em;
-  padding: 8px 16px;
-  border: 1px solid var(--rule-strong);
-  border-radius: 4px;
-  background: var(--surface);
-  color: var(--ink);
+  font-size: 0.9rem;
+  font-weight: 600;
+  padding: 0.55rem 1.05rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+  color: var(--color-text);
   cursor: pointer;
-  transition: background .15s linear, border-color .15s linear, color .15s linear;
+  box-shadow: 0 3px 0 0 var(--btn-depth);
+  transition: transform .08s ease, background var(--transition), color var(--transition);
 }
-button.ui:hover { border-color: var(--ink); }
-button.ui:disabled { opacity: .45; cursor: not-allowed; }
-button.ui.primary { background: var(--accent); border-color: var(--accent); color: #ffffff; font-weight: 600; }
-button.ui.primary:hover:not(:disabled) { background: var(--ink); border-color: var(--ink); color: var(--bg); }
+button.ui:active:not(:disabled) { transform: translateY(2px); box-shadow: 0 1px 0 0 var(--btn-depth); }
+button.ui:disabled { opacity: .45; cursor: not-allowed; box-shadow: none; }
+button.ui.primary {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: #ffffff;
+  box-shadow: 0 3px 0 0 var(--color-primary-depth);
+}
+button.ui.primary:hover:not(:disabled) { background: var(--color-primary-hover); border-color: var(--color-primary-hover); }
+button.ui.primary:active:not(:disabled) { box-shadow: 0 1px 0 0 var(--color-primary-depth); }
+button.ui.primary:disabled { box-shadow: none; }
 
 input[type=range] {
   -webkit-appearance: none;
   appearance: none;
-  width: 130px;
-  height: 2px;
-  background: var(--rule-strong);
-  border-radius: 0;
+  width: 140px;
+  height: 4px;
+  background: var(--color-border-strong);
+  border-radius: var(--radius-sm);
   cursor: pointer;
 }
 input[type=range]::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  width: 14px;
-  height: 14px;
-  border-radius: 3px;
-  background: var(--accent);
+  width: 16px;
+  height: 16px;
+  border-radius: var(--radius-sm);
+  background: var(--color-primary);
   border: none;
   cursor: pointer;
 }
 input[type=range]::-moz-range-thumb {
-  width: 14px;
-  height: 14px;
-  border-radius: 3px;
-  background: var(--accent);
+  width: 16px;
+  height: 16px;
+  border-radius: var(--radius-sm);
+  background: var(--color-primary);
   border: none;
   cursor: pointer;
 }
-#kval { font-size: 14px; min-width: 1.2em; }
+#kval { font-size: 0.95rem; font-weight: 600; min-width: 1.2em; }
 
 .readout {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-  border-top: 1px solid var(--rule);
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  border-top: 1px solid var(--color-border);
 }
-.readout div { padding: 12px 18px; border-right: 1px solid var(--rule); }
+.readout div { padding: 0.85rem 1.25rem; border-right: 1px solid var(--color-border); }
 .readout div:last-child { border-right: none; }
-.readout dt { font-size: 10.5px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-3); }
-.readout dd { font-size: 15px; margin-top: 3px; }
+.readout dt {
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-text-faint);
+}
+.readout dd { font-size: 0.95rem; margin-top: 3px; color: var(--color-text); }
 
 .note {
-  font-size: 13.5px;
-  color: var(--ink-3);
-  margin-top: 14px;
+  font-size: 0.9rem;
+  color: var(--color-text-muted);
+  margin-top: 18px;
   max-width: 76ch;
-  border-left: 2px solid var(--rule-strong);
-  padding-left: 12px;
+  background: var(--color-bg-alt);
+  border: 1px solid var(--color-border);
+  border-left: 3px solid var(--color-primary);
+  border-radius: var(--radius-sm);
+  padding: 0.9rem 1rem;
 }
 
 /* figures */
 .figures {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 24px;
+  gap: 20px;
 }
 figure {
-  border: 1px solid var(--rule);
-  border-radius: 6px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
   overflow: hidden;
-  background: var(--surface);
-  transition: border-color .15s linear;
+  background: var(--color-surface);
+  box-shadow: var(--shadow-sm);
+  transition: box-shadow var(--transition), transform var(--transition);
 }
-figure:hover { border-color: var(--rule-strong); }
-figure a { display: block; background: var(--figure-bg); border-bottom: 1px solid var(--rule); }
+figure:hover { box-shadow: var(--shadow-md); transform: translateY(-2px); }
+figure a { display: block; background: var(--figure-bg); border-bottom: 1px solid var(--color-border); }
 figure img { display: block; width: 100%; height: auto; }
-figcaption { padding: 13px 16px 15px; }
-figcaption strong { display: block; font-size: 14.5px; font-weight: 700; margin-bottom: 3px; }
-figcaption span { font-size: 13.5px; color: var(--ink-2); }
+figcaption { padding: 1rem 1.15rem 1.15rem; }
+figcaption strong { display: block; font-size: 0.98rem; font-weight: 700; margin-bottom: 4px; }
+figcaption span { font-size: 0.9rem; color: var(--color-text-muted); }
 figcaption .tag {
   display: inline-block;
-  font-size: 10.5px;
-  letter-spacing: 0.12em;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: var(--ink-3);
-  margin-bottom: 7px;
+  color: var(--color-primary);
+  background: var(--color-tint);
+  border-radius: var(--radius-sm);
+  padding: 2px 7px;
+  margin-bottom: 9px;
 }
 
 /* stack */
 .tags { display: flex; flex-wrap: wrap; gap: 8px; }
 .tag-item {
-  font-size: 13px;
-  color: var(--ink-2);
-  padding: 6px 12px;
-  border: 1px solid var(--rule);
-  border-radius: 4px;
-  background: var(--surface);
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--color-text-muted);
+  padding: 5px 11px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
 }
 
 /* team */
-.team { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); border-top: 1px solid var(--rule); }
-.team div { padding: 20px 0; border-bottom: 1px solid var(--rule); font-size: 16px; }
+.team { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px; }
+.team div {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+  padding: 1rem 1.15rem;
+  font-size: 0.98rem;
+  font-weight: 500;
+}
 
 footer {
   padding: 40px 0 72px;
-  color: var(--ink-3);
-  font-size: 13.5px;
+  color: var(--color-text-faint);
+  font-size: 0.9rem;
 }
 footer p + p { margin-top: 6px; }
-footer a { text-decoration: none; border-bottom: 1px solid var(--rule-strong); }
+footer a { text-decoration: none; }
+footer a:hover { text-decoration: underline; }
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  * { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; }
+}
 
 @media (max-width: 640px) {
   .wrap, .nav { padding-left: 20px; padding-right: 20px; }
   .nav-links { gap: 14px; }
   .nav-links a:nth-child(2) { display: none; }
-  .stage { grid-template-columns: 1fr; gap: 8px; }
   #kcanvas { height: 320px; }
-  .readout div { border-right: none; border-bottom: 1px solid var(--rule); }
-  .meta div { border-right: none; border-bottom: 1px solid var(--rule); padding-right: 0; }
-  section { padding: 48px 0; }
+  .readout div { border-right: none; border-bottom: 1px solid var(--color-border); }
+  section { padding: 52px 0; }
 }
 </style>
 </head>
@@ -359,8 +443,8 @@ footer a { text-decoration: none; border-bottom: 1px solid var(--rule-strong); }
 
 <header>
   <nav class="nav">
-    <span class="nav-title mono">Neuronal Analysis</span>
-    <div class="nav-links mono">
+    <span class="nav-title">Neuronal Analysis</span>
+    <div class="nav-links">
       <a href="#overview">Overview</a>
       <a href="#pipeline">Pipeline</a>
       <a href="#demo">Demo</a>
@@ -373,7 +457,7 @@ footer a { text-decoration: none; border-bottom: 1px solid var(--rule-strong); }
 <div class="wrap">
 
   <div class="hero">
-    <p class="kicker mono">CGS4144 Bioinformatics / University of Florida / 2023</p>
+    <p class="kicker">CGS4144 Bioinformatics / University of Florida / 2023</p>
     <h1>Modeling neuronal network behavior from gene expression</h1>
     <p class="lede">
       Gene analysis of the house mouse in R, using machine learning algorithms to decode neuronal
@@ -387,19 +471,19 @@ footer a { text-decoration: none; border-bottom: 1px solid var(--rule-strong); }
 
     <dl class="meta">
       <div>
-        <dt class="mono">Dataset</dt>
+        <dt>Dataset</dt>
         <dd><a href="https://www.refine.bio/experiments/SRP094496/correlating-anatomy-and-function-with-gene-expression-in-individual-neurons-by-combining-in-vivo-labeling-patch-clamp-and-single-cell-rna-seq">refine.bio SRP094496</a></dd>
       </div>
       <div>
-        <dt class="mono">Organism</dt>
+        <dt>Organism</dt>
         <dd><em>Mus musculus</em></dd>
       </div>
       <div>
-        <dt class="mono">Variables</dt>
+        <dt>Variables</dt>
         <dd>~41,000 measured</dd>
       </div>
       <div>
-        <dt class="mono">Language</dt>
+        <dt>Language</dt>
         <dd>R 4.3.1 / Bioconductor</dd>
       </div>
     </dl>
@@ -407,7 +491,7 @@ footer a { text-decoration: none; border-bottom: 1px solid var(--rule-strong); }
 
   <section id="overview">
     <div class="sec-head">
-      <span class="sec-num mono">01 / Overview</span>
+      <span class="sec-num">01 / Overview</span>
       <h2>What the project asks</h2>
       <p class="sec-sub">
         How the transcriptional profiles of individual neurons, characterized by their anatomical and
@@ -434,34 +518,34 @@ footer a { text-decoration: none; border-bottom: 1px solid var(--rule-strong); }
 
   <section id="pipeline">
     <div class="sec-head">
-      <span class="sec-num mono">02 / Pipeline</span>
+      <span class="sec-num">02 / Pipeline</span>
       <h2>Four stages, all in R</h2>
       <p class="sec-sub">Implemented with Bioconductor tooling, each stage feeding the next.</p>
     </div>
     <div class="stages">
       <div class="stage">
-        <div class="stage-idx mono">01</div>
+        <span class="stage-idx">01</span>
         <div>
           <h3>Preprocessing</h3>
           <p>Ensembl identifiers mapped to HUGO symbols with the house mouse annotation package, log scaling, and density checks across roughly 41,000 measured variables.</p>
         </div>
       </div>
       <div class="stage">
-        <div class="stage-idx mono">02</div>
+        <span class="stage-idx">02</span>
         <div>
           <h3>Expression structure</h3>
           <p>PCA on a DESeq2 dataset and UMAP embedding to see how the two sample classes separate, followed by differential expression and a volcano plot of the significant genes.</p>
         </div>
       </div>
       <div class="stage">
-        <div class="stage-idx mono">03</div>
+        <span class="stage-idx">03</span>
         <div>
           <h3>Enrichment and clustering</h3>
           <p>Gene set enrichment with topGO, clusterProfiler, and gprofiler2, then k-means, hierarchical clustering, and ConsensusClusterPlus compared against each other with chi-squared tests and alluvial diagrams.</p>
         </div>
       </div>
       <div class="stage">
-        <div class="stage-idx mono">04</div>
+        <span class="stage-idx">04</span>
         <div>
           <h3>Supervised models</h3>
           <p>SVM, logistic regression, random forest, and naive Bayes trained on the most variable genes, with gene signatures extracted per model and rerun across different gene set sizes.</p>
@@ -472,7 +556,7 @@ footer a { text-decoration: none; border-bottom: 1px solid var(--rule-strong); }
 
   <section id="demo">
     <div class="sec-head">
-      <span class="sec-num mono">03 / Interactive</span>
+      <span class="sec-num">03 / Interactive</span>
       <h2>K-means, one iteration at a time</h2>
       <p class="sec-sub">
         Stage three compares k-means against hierarchical and consensus clustering. This is that
@@ -487,7 +571,7 @@ footer a { text-decoration: none; border-bottom: 1px solid var(--rule-strong); }
       </div>
       <div class="demo-bar">
         <div class="ctl">
-          <label class="mono" for="kslider">Clusters k</label>
+          <label for="kslider">Clusters k</label>
           <input id="kslider" type="range" min="2" max="8" step="1" value="4">
           <span id="kval" class="mono">4</span>
         </div>
@@ -496,14 +580,14 @@ footer a { text-decoration: none; border-bottom: 1px solid var(--rule-strong); }
           <button id="runbtn" class="ui">Run</button>
           <button id="reseedbtn" class="ui">Reseed</button>
         </div>
-        <span class="hint mono">Reseed or move k to restart</span>
+        <span class="hint">Reseed or move k to restart</span>
       </div>
       <dl class="readout">
-        <div><dt class="mono">Iteration</dt><dd id="r-iter" class="mono">0</dd></div>
-        <div><dt class="mono">Next step</dt><dd id="r-phase" class="mono">assign</dd></div>
-        <div><dt class="mono">Points</dt><dd id="r-points" class="mono">240</dd></div>
-        <div><dt class="mono">Within-cluster SS</dt><dd id="r-wcss" class="mono">n/a</dd></div>
-        <div><dt class="mono">Status</dt><dd id="r-status" class="mono">ready</dd></div>
+        <div><dt>Iteration</dt><dd id="r-iter" class="mono">0</dd></div>
+        <div><dt>Next step</dt><dd id="r-phase" class="mono">assign</dd></div>
+        <div><dt>Points</dt><dd id="r-points" class="mono">240</dd></div>
+        <div><dt>Within-cluster SS</dt><dd id="r-wcss" class="mono">n/a</dd></div>
+        <div><dt>Status</dt><dd id="r-status" class="mono">ready</dd></div>
       </dl>
     </div>
 
@@ -517,7 +601,7 @@ footer a { text-decoration: none; border-bottom: 1px solid var(--rule-strong); }
 
   <section id="figures">
     <div class="sec-head">
-      <span class="sec-num mono">04 / Figures</span>
+      <span class="sec-num">04 / Figures</span>
       <h2>Selected outputs</h2>
       <p class="sec-sub">Eighteen figures from the analysis. Click any figure to open it at full size.</p>
     </div>
@@ -525,82 +609,82 @@ footer a { text-decoration: none; border-bottom: 1px solid var(--rule-strong); }
     <div class="figures">
       <figure>
         <a href="figures/density_plot.png"><img src="figures/density_plot.png" alt="Density plot of log-scaled expression values" loading="lazy"></a>
-        <figcaption><span class="tag mono">Preprocessing</span><strong>Expression density</strong><span>Distribution of log-scaled expression values after preprocessing.</span></figcaption>
+        <figcaption><span class="tag">Preprocessing</span><strong>Expression density</strong><span>Distribution of log-scaled expression values after preprocessing.</span></figcaption>
       </figure>
       <figure>
         <a href="figures/SRP123625_pca_plot.png"><img src="figures/SRP123625_pca_plot.png" alt="PCA plot of samples" loading="lazy"></a>
-        <figcaption><span class="tag mono">Structure</span><strong>Principal components</strong><span>PCA over the DESeq2 dataset, colored by sample class.</span></figcaption>
+        <figcaption><span class="tag">Structure</span><strong>Principal components</strong><span>PCA over the DESeq2 dataset, colored by sample class.</span></figcaption>
       </figure>
       <figure>
         <a href="figures/UMAP_plot.png"><img src="figures/UMAP_plot.png" alt="UMAP embedding of samples" loading="lazy"></a>
-        <figcaption><span class="tag mono">Structure</span><strong>UMAP embedding</strong><span>Nonlinear projection of the same samples for comparison with PCA.</span></figcaption>
+        <figcaption><span class="tag">Structure</span><strong>UMAP embedding</strong><span>Nonlinear projection of the same samples for comparison with PCA.</span></figcaption>
       </figure>
       <figure>
         <a href="figures/SRP123625_volcano_plot.png"><img src="figures/SRP123625_volcano_plot.png" alt="Volcano plot of differential expression results" loading="lazy"></a>
-        <figcaption><span class="tag mono">Structure</span><strong>Differential expression</strong><span>EnhancedVolcano plot over all measured variables, labeling the strongest hits.</span></figcaption>
+        <figcaption><span class="tag">Structure</span><strong>Differential expression</strong><span>EnhancedVolcano plot over all measured variables, labeling the strongest hits.</span></figcaption>
       </figure>
       <figure>
         <a href="figures/ass1_heatmap.png"><img src="figures/ass1_heatmap.png" alt="Heatmap of significant genes" loading="lazy"></a>
-        <figcaption><span class="tag mono">Structure</span><strong>Significant gene heatmap</strong><span>Z-scored expression of the genes passing the significance threshold.</span></figcaption>
+        <figcaption><span class="tag">Structure</span><strong>Significant gene heatmap</strong><span>Z-scored expression of the genes passing the significance threshold.</span></figcaption>
       </figure>
       <figure>
         <a href="figures/clust_profiler.png"><img src="figures/clust_profiler.png" alt="Gene set enrichment results" loading="lazy"></a>
-        <figcaption><span class="tag mono">Enrichment</span><strong>Enrichment analysis</strong><span>Enriched terms recovered from the differentially expressed gene set.</span></figcaption>
+        <figcaption><span class="tag">Enrichment</span><strong>Enrichment analysis</strong><span>Enriched terms recovered from the differentially expressed gene set.</span></figcaption>
       </figure>
       <figure>
         <a href="figures/k_means_silhouette.png"><img src="figures/k_means_silhouette.png" alt="Average silhouette width across k values" loading="lazy"></a>
-        <figcaption><span class="tag mono">Clustering</span><strong>Choosing k</strong><span>Average silhouette width across candidate k-means cluster counts.</span></figcaption>
+        <figcaption><span class="tag">Clustering</span><strong>Choosing k</strong><span>Average silhouette width across candidate k-means cluster counts.</span></figcaption>
       </figure>
       <figure>
         <a href="figures/CDF.png"><img src="figures/CDF.png" alt="Consensus clustering CDF curves" loading="lazy"></a>
-        <figcaption><span class="tag mono">Clustering</span><strong>Consensus clustering</strong><span>CDF curves from ConsensusClusterPlus used to assess cluster stability.</span></figcaption>
+        <figcaption><span class="tag">Clustering</span><strong>Consensus clustering</strong><span>CDF curves from ConsensusClusterPlus used to assess cluster stability.</span></figcaption>
       </figure>
       <figure>
         <a href="figures/top_5000_ccp.png"><img src="figures/top_5000_ccp.png" alt="Consensus matrix for the top 5000 genes" loading="lazy"></a>
-        <figcaption><span class="tag mono">Clustering</span><strong>Consensus matrix</strong><span>Consensus clustering over the 5,000 most variable genes.</span></figcaption>
+        <figcaption><span class="tag">Clustering</span><strong>Consensus matrix</strong><span>Consensus clustering over the 5,000 most variable genes.</span></figcaption>
       </figure>
       <figure>
         <a href="figures/k_means_alluvial.png"><img src="figures/k_means_alluvial.png" alt="Alluvial diagram of k-means cluster membership" loading="lazy"></a>
-        <figcaption><span class="tag mono">Clustering</span><strong>K-means membership</strong><span>How sample assignments shift as the number of input genes changes.</span></figcaption>
+        <figcaption><span class="tag">Clustering</span><strong>K-means membership</strong><span>How sample assignments shift as the number of input genes changes.</span></figcaption>
       </figure>
       <figure>
         <a href="figures/hclust_alluvial.png"><img src="figures/hclust_alluvial.png" alt="Alluvial diagram of hierarchical clustering membership" loading="lazy"></a>
-        <figcaption><span class="tag mono">Clustering</span><strong>Hierarchical membership</strong><span>The same comparison for hierarchical clustering.</span></figcaption>
+        <figcaption><span class="tag">Clustering</span><strong>Hierarchical membership</strong><span>The same comparison for hierarchical clustering.</span></figcaption>
       </figure>
       <figure>
         <a href="figures/ccp_alluvial.png"><img src="figures/ccp_alluvial.png" alt="Alluvial diagram of consensus cluster membership" loading="lazy"></a>
-        <figcaption><span class="tag mono">Clustering</span><strong>Consensus membership</strong><span>Cluster flow for ConsensusClusterPlus across gene set sizes.</span></figcaption>
+        <figcaption><span class="tag">Clustering</span><strong>Consensus membership</strong><span>Cluster flow for ConsensusClusterPlus across gene set sizes.</span></figcaption>
       </figure>
       <figure>
         <a href="figures/svm_plot.png"><img src="figures/svm_plot.png" alt="SVM decision boundary over the first two principal components" loading="lazy"></a>
-        <figcaption><span class="tag mono">Supervised</span><strong>SVM decision surface</strong><span>Linear SVM trained on the first two principal components.</span></figcaption>
+        <figcaption><span class="tag">Supervised</span><strong>SVM decision surface</strong><span>Linear SVM trained on the first two principal components.</span></figcaption>
       </figure>
       <figure>
         <a href="figures/ass4_svm.png"><img src="figures/ass4_svm.png" alt="Heatmap of the SVM gene signature" loading="lazy"></a>
-        <figcaption><span class="tag mono">Supervised</span><strong>SVM signature</strong><span>Genes selected by the support vector machine.</span></figcaption>
+        <figcaption><span class="tag">Supervised</span><strong>SVM signature</strong><span>Genes selected by the support vector machine.</span></figcaption>
       </figure>
       <figure>
         <a href="figures/ass4_logregr.png"><img src="figures/ass4_logregr.png" alt="Heatmap of the logistic regression gene signature" loading="lazy"></a>
-        <figcaption><span class="tag mono">Supervised</span><strong>Logistic regression signature</strong><span>Scaled expression of the genes the logistic model relies on.</span></figcaption>
+        <figcaption><span class="tag">Supervised</span><strong>Logistic regression signature</strong><span>Scaled expression of the genes the logistic model relies on.</span></figcaption>
       </figure>
       <figure>
         <a href="figures/ass4_randomForest.png"><img src="figures/ass4_randomForest.png" alt="Heatmap of the random forest gene signature" loading="lazy"></a>
-        <figcaption><span class="tag mono">Supervised</span><strong>Random forest signature</strong><span>Genes ranked highest by the random forest model.</span></figcaption>
+        <figcaption><span class="tag">Supervised</span><strong>Random forest signature</strong><span>Genes ranked highest by the random forest model.</span></figcaption>
       </figure>
       <figure>
         <a href="figures/ass3_heatmap1.png"><img src="figures/ass3_heatmap1.png" alt="Clustered expression heatmap with sample annotations" loading="lazy"></a>
-        <figcaption><span class="tag mono">Clustering</span><strong>Annotated clustering</strong><span>Expression heatmap with row and column dendrograms plus class annotations.</span></figcaption>
+        <figcaption><span class="tag">Clustering</span><strong>Annotated clustering</strong><span>Expression heatmap with row and column dendrograms plus class annotations.</span></figcaption>
       </figure>
       <figure>
         <a href="figures/ass3_heatmap2.png"><img src="figures/ass3_heatmap2.png" alt="Second clustered expression heatmap" loading="lazy"></a>
-        <figcaption><span class="tag mono">Clustering</span><strong>Annotated clustering, alternate view</strong><span>The same data under a different clustering configuration.</span></figcaption>
+        <figcaption><span class="tag">Clustering</span><strong>Annotated clustering, alternate view</strong><span>The same data under a different clustering configuration.</span></figcaption>
       </figure>
     </div>
   </section>
 
   <section>
     <div class="sec-head">
-      <span class="sec-num mono">05 / Stack</span>
+      <span class="sec-num">05 / Stack</span>
       <h2>Tooling</h2>
       <p class="sec-sub">Everything runs in R 4.3.1 under RStudio, with Bioconductor packages installed through BiocManager.</p>
     </div>
@@ -625,7 +709,7 @@ footer a { text-decoration: none; border-bottom: 1px solid var(--rule-strong); }
 
   <section>
     <div class="sec-head">
-      <span class="sec-num mono">06 / Team</span>
+      <span class="sec-num">06 / Team</span>
       <h2>Contributors</h2>
     </div>
     <div class="team">
@@ -649,7 +733,7 @@ footer a { text-decoration: none; border-bottom: 1px solid var(--rule-strong); }
   if (!canvas || !canvas.getContext) return;
   var ctx = canvas.getContext("2d");
 
-  var PALETTE = ["#e4572e", "#2d7dd2", "#17a398", "#8e44ad", "#d1a827", "#547aa5", "#9b2226", "#4c9f70"];
+  var PALETTE = ["#10b981", "#2563eb", "#f97316", "#8b5cf6", "#0891b2", "#eab308", "#ec4899", "#047852"];
   var N = 240;
   var PAD = 26;
 
@@ -838,9 +922,9 @@ footer a { text-decoration: none; border-bottom: 1px solid var(--rule-strong); }
     var w = rect.width, h = rect.height;
     ctx.clearRect(0, 0, w, h);
 
-    var surface = css("--surface") || "#ffffff";
-    var rule = css("--rule") || "#dddddd";
-    var ink3 = css("--ink-3") || "#888888";
+    var surface = css("--color-surface") || "#ffffff";
+    var rule = css("--color-border") || "#dddddd";
+    var ink3 = css("--color-text-faint") || "#888888";
 
     ctx.fillStyle = surface;
     ctx.fillRect(0, 0, w, h);
